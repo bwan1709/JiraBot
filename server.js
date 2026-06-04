@@ -8,16 +8,22 @@ const Database = require('better-sqlite3');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const CLOUD_ID    = process.env.ATLASSIAN_CLOUD_ID    || 'eb9eb013-c13d-4c58-8af5-a442ed90f2f0';
-const ACCOUNT_ID  = process.env.ATLASSIAN_ACCOUNT_ID  || '712020:d8b2807a-adfc-42a8-9ba7-a3e22f01d907';
-const EMAIL       = process.env.ATLASSIAN_EMAIL;
-const API_TOKEN   = process.env.ATLASSIAN_TOKEN;
-const BASE_URL    = process.env.ATLASSIAN_BASE_URL    || 'https://pvqpm.atlassian.net';
-const JIRA_API    = `https://api.atlassian.com/ex/jira/${CLOUD_ID}/rest/api/3`;
-
 const DATA_DIR    = path.join(__dirname, 'data');
 const DB_PATH     = path.join(DATA_DIR, 'jirabot.db');
 const PUBLIC_DIR  = path.join(__dirname, 'public');
+
+// Parse cookies middleware
+app.use((req, res, next) => {
+    req.cookies = {};
+    const rc = req.headers.cookie;
+    if (rc) {
+        rc.split(';').forEach(cookie => {
+            const parts = cookie.split('=');
+            req.cookies[parts.shift().trim()] = decodeURI(parts.join('='));
+        });
+    }
+    next();
+});
 
 // Middleware to disable caching for API endpoints and static assets in dev
 app.use((req, res, next) => {
@@ -27,57 +33,104 @@ app.use((req, res, next) => {
     next();
 });
 
+const PUBLIC_PATHS = ['/login.html', '/docx.bundle.js', '/favicon.ico'];
+const PUBLIC_API_PREFIXES = ['/api/login', '/api/register'];
+
+function requireAuth(req, res, next) {
+    if (PUBLIC_PATHS.includes(req.path) || PUBLIC_API_PREFIXES.some(p => req.path.startsWith(p))) {
+        return next();
+    }
+    const userId = req.cookies.user_id;
+    if (!userId) {
+        if (req.xhr || req.path.startsWith('/api/')) {
+            return res.status(401).json({ error: 'unauthorized' });
+        }
+        return res.redirect('/login.html');
+    }
+    try {
+        const user = db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
+        if (!user) {
+            res.clearCookie('user_id');
+            if (req.xhr || req.path.startsWith('/api/')) {
+                return res.status(401).json({ error: 'unauthorized' });
+            }
+            return res.redirect('/login.html');
+        }
+        req.user = user;
+        next();
+    } catch (e) {
+        console.error('Lỗi xác thực:', e.message);
+        if (req.xhr || req.path.startsWith('/api/')) {
+            return res.status(500).json({ error: 'Lỗi xác thực hệ thống' });
+        }
+        return res.redirect('/login.html');
+    }
+}
+
+app.use(requireAuth);
 app.use(express.static(PUBLIC_DIR));
 app.use(express.json());
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function getAuthHeader() {
-    return `Basic ${Buffer.from(`${EMAIL}:${API_TOKEN}`).toString('base64')}`;
+function getAuthHeader(user) {
+    return `Basic ${Buffer.from(`${user.email}:${user.token}`).toString('base64')}`;
 }
 
-async function jiraGet(endpoint) {
-    const url = endpoint.startsWith('http') ? endpoint : `${JIRA_API}${endpoint}`;
+async function jiraGet(user, endpoint) {
+    const userJiraApi = `https://api.atlassian.com/ex/jira/${user.cloud_id}/rest/api/3`;
+    const url = endpoint.startsWith('http') ? endpoint : `${userJiraApi}${endpoint}`;
     const res = await fetch(url, {
-        headers: { 'Authorization': getAuthHeader(), 'Accept': 'application/json' }
+        headers: { 'Authorization': getAuthHeader(user), 'Accept': 'application/json' }
     });
     if (!res.ok) {
+        if (res.status === 401) {
+            throw new Error('JIRA_401');
+        }
         const txt = await res.text();
         throw new Error(`Jira API ${res.status}: ${txt.substring(0, 200)}`);
     }
     return res.json();
 }
 
-async function jiraPost(endpoint, body) {
-    const url = endpoint.startsWith('http') ? endpoint : `${JIRA_API}${endpoint}`;
+async function jiraPost(user, endpoint, body) {
+    const userJiraApi = `https://api.atlassian.com/ex/jira/${user.cloud_id}/rest/api/3`;
+    const url = endpoint.startsWith('http') ? endpoint : `${userJiraApi}${endpoint}`;
     const res = await fetch(url, {
         method: 'POST',
         headers: { 
-            'Authorization': getAuthHeader(), 
+            'Authorization': getAuthHeader(user), 
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
     });
     if (!res.ok) {
+        if (res.status === 401) {
+            throw new Error('JIRA_401');
+        }
         const txt = await res.text();
         throw new Error(`Jira API ${res.status}: ${txt.substring(0, 200)}`);
     }
     return res.status === 204 ? {} : res.json();
 }
 
-async function jiraPut(endpoint, body) {
-    const url = endpoint.startsWith('http') ? endpoint : `${JIRA_API}${endpoint}`;
+async function jiraPut(user, endpoint, body) {
+    const userJiraApi = `https://api.atlassian.com/ex/jira/${user.cloud_id}/rest/api/3`;
+    const url = endpoint.startsWith('http') ? endpoint : `${userJiraApi}${endpoint}`;
     const res = await fetch(url, {
         method: 'PUT',
         headers: { 
-            'Authorization': getAuthHeader(), 
+            'Authorization': getAuthHeader(user), 
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
     });
     if (!res.ok) {
+        if (res.status === 401) {
+            throw new Error('JIRA_401');
+        }
         const txt = await res.text();
         throw new Error(`Jira API ${res.status}: ${txt.substring(0, 200)}`);
     }
@@ -151,9 +204,35 @@ function initDb() {
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL'); // Better concurrent read performance
 
+    // Check if users table exists. If not, old database schemas are present and need migration.
+    const hasUsersTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='users'`).get();
+    if (!hasUsersTable) {
+        console.log('  ⚠️  Old database schema detected. Dropping old tables for migration...');
+        db.exec(`
+            DROP TABLE IF EXISTS tasks;
+            DROP TABLE IF EXISTS working_days;
+            DROP TABLE IF EXISTS months;
+        `);
+    }
+
     db.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            email       TEXT UNIQUE NOT NULL,
+            password    TEXT NOT NULL DEFAULT 'ilovecds',
+            token       TEXT NOT NULL,
+            cloud_id    TEXT NOT NULL,
+            account_id  TEXT NOT NULL,
+            base_url    TEXT NOT NULL,
+            full_name   TEXT,
+            role        TEXT,
+            department  TEXT,
+            created_at  TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS months (
-            year_month        TEXT PRIMARY KEY,
+            user_id           INTEGER NOT NULL,
+            year_month        TEXT NOT NULL,
             month             INTEGER NOT NULL,
             year              INTEGER NOT NULL,
             month_label       TEXT,
@@ -168,10 +247,13 @@ function initDb() {
             todo_count        INTEGER DEFAULT 0,
             no_worklog_count  INTEGER DEFAULT 0,
             last_updated      TEXT,
-            today             TEXT
+            today             TEXT,
+            PRIMARY KEY (user_id, year_month),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS tasks (
+            user_id            INTEGER NOT NULL,
             key                TEXT NOT NULL,
             year_month         TEXT NOT NULL,
             task_type          TEXT NOT NULL,
@@ -195,11 +277,12 @@ function initDb() {
             story_points       REAL,
             missing_fields     TEXT,
             created            TEXT,
-            PRIMARY KEY (key, year_month),
-            FOREIGN KEY (year_month) REFERENCES months(year_month) ON DELETE CASCADE
+            PRIMARY KEY (user_id, key, year_month),
+            FOREIGN KEY (user_id, year_month) REFERENCES months(user_id, year_month) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS working_days (
+            user_id      INTEGER NOT NULL,
             year_month   TEXT NOT NULL,
             date         TEXT NOT NULL,
             day_label    TEXT,
@@ -208,24 +291,54 @@ function initDb() {
             is_saturday  INTEGER DEFAULT 0,
             standard     REAL DEFAULT 0,
             logged       REAL DEFAULT 0,
-            PRIMARY KEY (year_month, date),
-            FOREIGN KEY (year_month) REFERENCES months(year_month) ON DELETE CASCADE
+            PRIMARY KEY (user_id, year_month, date),
+            FOREIGN KEY (user_id, year_month) REFERENCES months(user_id, year_month) ON DELETE CASCADE
         );
     `);
+
+    // Seed default admin user from .env if table is empty
+    const defaultEmail = process.env.ATLASSIAN_EMAIL || 'admin@example.com';
+    const count = db.prepare('SELECT count(*) as c FROM users').get().c;
+    if (count === 0) {
+        const defaultToken = process.env.ATLASSIAN_TOKEN || '';
+        const defaultCloudId = process.env.ATLASSIAN_CLOUD_ID || 'eb9eb013-c13d-4c58-8af5-a442ed90f2f0';
+        const defaultAccountId = process.env.ATLASSIAN_ACCOUNT_ID || '712020:d8b2807a-adfc-42a8-9ba7-a3e22f01d907';
+        const defaultBaseUrl = process.env.ATLASSIAN_BASE_URL || 'https://pvqpm.atlassian.net';
+
+        db.prepare(`
+            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+            defaultEmail,
+            'ilovecds',
+            defaultToken,
+            defaultCloudId,
+            defaultAccountId,
+            defaultBaseUrl,
+            'Hoàng Bình Quân',
+            'admin',
+            'Acorneri IT',
+            new Date().toISOString()
+        );
+        console.log('  👤 Seeded default admin user from .env credentials:', defaultEmail);
+    } else {
+        // Ensure the seeded admin user has 'admin' role
+        db.prepare(`UPDATE users SET role = 'admin' WHERE email = ?`).run(defaultEmail);
+    }
 
     console.log('  💾 SQLite DB initialized:', DB_PATH);
 }
 
-// Save full month data (upsert) using a single transaction
-function saveMonthData(result) {
+// Save full month data (upsert) using a single transaction bound to user_id
+function saveMonthData(userId, result) {
     const upsertMonth = db.prepare(`
         INSERT OR REPLACE INTO months
-            (year_month, month, year, month_label, standard_hours, total_logged,
+            (user_id, year_month, month, year, month_label, standard_hours, total_logged,
              required_to_date, logged_to_date, net_to_date, progress_pct,
              task_count, in_progress_count, todo_count, no_worklog_count,
              last_updated, today)
         VALUES
-            (@year_month, @month, @year, @month_label, @standard_hours, @total_logged,
+            (@user_id, @year_month, @month, @year, @month_label, @standard_hours, @total_logged,
              @required_to_date, @logged_to_date, @net_to_date, @progress_pct,
              @task_count, @in_progress_count, @todo_count, @no_worklog_count,
              @last_updated, @today)
@@ -233,12 +346,12 @@ function saveMonthData(result) {
 
     const upsertTask = db.prepare(`
         INSERT OR REPLACE INTO tasks
-            (key, year_month, task_type, summary, project, project_key, issue_type,
+            (user_id, key, year_month, task_type, summary, project, project_key, issue_type,
              status, resolved_date, parent_key, time_spent_hours, time_spent_display,
              has_worklog, url, original_estimate, actual_start, actual_end,
              labels, duedate, start_date, story_points, missing_fields, created)
         VALUES
-            (@key, @year_month, @task_type, @summary, @project, @project_key, @issue_type,
+            (@user_id, @key, @year_month, @task_type, @summary, @project, @project_key, @issue_type,
              @status, @resolved_date, @parent_key, @time_spent_hours, @time_spent_display,
              @has_worklog, @url, @original_estimate, @actual_start, @actual_end,
              @labels, @duedate, @start_date, @story_points, @missing_fields, @created)
@@ -246,17 +359,18 @@ function saveMonthData(result) {
 
     const upsertDay = db.prepare(`
         INSERT OR REPLACE INTO working_days
-            (year_month, date, day_label, day_name, dow, is_saturday, standard, logged)
+            (user_id, year_month, date, day_label, day_name, dow, is_saturday, standard, logged)
         VALUES
-            (@year_month, @date, @day_label, @day_name, @dow, @is_saturday, @standard, @logged)
+            (@user_id, @year_month, @date, @day_label, @day_name, @dow, @is_saturday, @standard, @logged)
     `);
 
-    const deleteTasks = db.prepare(`DELETE FROM tasks WHERE year_month = ?`);
-    const deleteDays  = db.prepare(`DELETE FROM working_days WHERE year_month = ?`);
+    const deleteTasks = db.prepare(`DELETE FROM tasks WHERE user_id = ? AND year_month = ?`);
+    const deleteDays  = db.prepare(`DELETE FROM working_days WHERE user_id = ? AND year_month = ?`);
 
     const runAll = db.transaction((r) => {
         // Upsert month summary
         upsertMonth.run({
+            user_id:           userId,
             year_month:        r.year_month,
             month:             r.month,
             year:              r.year,
@@ -276,8 +390,9 @@ function saveMonthData(result) {
         });
 
         // Replace tasks (delete then insert to handle removed tasks)
-        deleteTasks.run(r.year_month);
+        deleteTasks.run(userId, r.year_month);
         const taskToRow = (t, type) => ({
+            user_id:            userId,
             key:                t.key,
             year_month:         r.year_month,
             task_type:          type,
@@ -307,8 +422,9 @@ function saveMonthData(result) {
         r.todo_tasks.forEach(t => upsertTask.run(taskToRow(t, 'todo')));
 
         // Replace working days
-        deleteDays.run(r.year_month);
+        deleteDays.run(userId, r.year_month);
         r.working_days.forEach(d => upsertDay.run({
+            user_id:     userId,
             year_month:  r.year_month,
             date:        d.date,
             day_label:   d.day_label,
@@ -323,9 +439,9 @@ function saveMonthData(result) {
     runAll(result);
 }
 
-// Reconstruct full result object from DB (matches old JSON format exactly)
-function loadMonthData(ym) {
-    const meta = db.prepare(`SELECT * FROM months WHERE year_month = ?`).get(ym);
+// Reconstruct full result object from DB contextually based on user_id
+function loadMonthData(userId, ym) {
+    const meta = db.prepare(`SELECT * FROM months WHERE user_id = ? AND year_month = ?`).get(userId, ym);
     if (!meta) return null;
 
     const rowToTask = (row) => ({
@@ -352,10 +468,10 @@ function loadMonthData(ym) {
         created:            row.created
     });
 
-    const tasks           = db.prepare(`SELECT * FROM tasks WHERE year_month = ? AND task_type = 'done' ORDER BY resolved_date DESC`).all(ym).map(rowToTask);
-    const in_progress_tasks = db.prepare(`SELECT * FROM tasks WHERE year_month = ? AND task_type = 'in_progress' ORDER BY key`).all(ym).map(rowToTask);
-    const todo_tasks      = db.prepare(`SELECT * FROM tasks WHERE year_month = ? AND task_type = 'todo' ORDER BY key`).all(ym).map(rowToTask);
-    const working_days    = db.prepare(`SELECT * FROM working_days WHERE year_month = ? ORDER BY date`).all(ym).map(row => ({
+    const tasks           = db.prepare(`SELECT * FROM tasks WHERE user_id = ? AND year_month = ? AND task_type = 'done' ORDER BY resolved_date DESC`).all(userId, ym).map(rowToTask);
+    const in_progress_tasks = db.prepare(`SELECT * FROM tasks WHERE user_id = ? AND year_month = ? AND task_type = 'in_progress' ORDER BY key`).all(userId, ym).map(rowToTask);
+    const todo_tasks      = db.prepare(`SELECT * FROM tasks WHERE user_id = ? AND year_month = ? AND task_type = 'todo' ORDER BY key`).all(userId, ym).map(rowToTask);
+    const working_days    = db.prepare(`SELECT * FROM working_days WHERE user_id = ? AND year_month = ? ORDER BY date`).all(userId, ym).map(row => ({
         date:        row.date,
         day_label:   row.day_label,
         day_name:    row.day_name,
@@ -391,27 +507,29 @@ function loadMonthData(ym) {
 
 // ─── Jira Fetch Helpers ────────────────────────────────────────────────────
 
-// Fetch one page — used to kick off pagination
-async function fetchPage(jql, fields, startAt = 0, maxResults = 100) {
-    const q = new URLSearchParams({ jql, fields, maxResults: String(maxResults), startAt: String(startAt) });
-    return jiraGet(`/search/jql?${q}`);
+// Fetch one page contextually for a user
+async function fetchPage(user, jql, fields, nextPageToken = null, maxResults = 100) {
+    const params = { jql, fields, maxResults: String(maxResults) };
+    if (nextPageToken) {
+        params.nextPageToken = nextPageToken;
+    }
+    const q = new URLSearchParams(params);
+    return jiraGet(user, `/search/jql?${q}`);
 }
 
-// Fetch all pages, fire first page immediately and paginate in parallel
-async function searchAll(jql, fields) {
-    const first = await fetchPage(jql, fields, 0);
-    if (!first.issues || first.issues.length === 0) return [];
+// Fetch all pages contextually for a user
+async function searchAll(user, jql, fields) {
+    const results = [];
+    let nextPageToken = null;
+    let isLast = false;
 
-    const results = [...first.issues];
-    const total = first.total;
-
-    if (total > results.length) {
-        const remaining = [];
-        for (let startAt = results.length; startAt < total; startAt += 100) {
-            remaining.push(fetchPage(jql, fields, startAt));
+    while (!isLast) {
+        const page = await fetchPage(user, jql, fields, nextPageToken);
+        if (page.issues && page.issues.length > 0) {
+            results.push(...page.issues);
         }
-        const pages = await Promise.all(remaining);
-        pages.forEach(p => results.push(...(p.issues || [])));
+        nextPageToken = page.nextPageToken;
+        isLast = page.isLast === true || !page.nextPageToken;
     }
 
     return results;
@@ -419,10 +537,228 @@ async function searchAll(jql, fields) {
 
 // ─── Routes ────────────────────────────────────────────────────────────────
 
+// ─── Authentication & User Routes ──────────────────────────────────────────
+
+// POST /api/login — Login handler
+app.post('/api/login', (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Vui lòng điền đầy đủ email và mật khẩu.' });
+        }
+        const user = db.prepare(`SELECT * FROM users WHERE email = ?`).get(email);
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác.' });
+        }
+
+        // Set httpOnly session cookie
+        res.cookie('user_id', user.id.toString(), { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                full_name: user.full_name,
+                role: user.role,
+                department: user.department
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/register — Register new account (email + password only)
+app.post('/api/register', (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Vui lòng điền đầy đủ email và mật khẩu.' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+        }
+
+        const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+        if (existing) {
+            return res.status(400).json({ error: 'Email này đã được đăng ký trong hệ thống.' });
+        }
+
+        // Create user with empty Jira credentials — to be filled via profile settings
+        const info = db.prepare(`
+            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, created_at)
+            VALUES (?, ?, '', '', '', '', ?, 'client', '', ?)
+        `).run(email, password, email.split('@')[0], new Date().toISOString());
+
+        // Auto login
+        res.cookie('user_id', info.lastInsertRowid.toString(), { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+        res.json({ success: true, message: 'Đăng ký thành công! Vui lòng cập nhật thông tin Jira trong mục Cài đặt.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/logout — Logout handler
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('user_id');
+    res.json({ success: true });
+});
+
+// GET /api/me — Get profile of currently logged-in user
+app.get('/api/me', (req, res) => {
+    const full = req.query.full === '1';
+    const u = req.user;
+    const payload = {
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name,
+        role: u.role,
+        department: u.department,
+        base_url: u.base_url
+    };
+    if (full) {
+        payload.token = u.token || '';
+        payload.account_id = u.account_id || '';
+        payload.cloud_id = u.cloud_id || '';
+        payload.email_jira = u.email || ''; // email is also used for Jira auth
+    }
+    res.json({ user: payload });
+});
+
+// PUT /api/profile — Update own profile (any authenticated user)
+app.put('/api/profile', (req, res) => {
+    try {
+        const { full_name, department, email_jira, token, account_id, cloud_id, base_url, password } = req.body;
+
+        if (!full_name || !full_name.trim()) {
+            return res.status(400).json({ error: 'Vui lòng nhập Họ & Tên.' });
+        }
+        if (password && password.length < 6) {
+            return res.status(400).json({ error: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+        }
+
+        // Build update fields
+        const fields = {
+            full_name: full_name.trim(),
+            department: (department || '').trim(),
+            token: (token || '').trim(),
+            account_id: (account_id || '').trim(),
+            cloud_id: (cloud_id || '').trim(),
+            base_url: (base_url || '').trim()
+        };
+        if (password) fields.password = password;
+
+        const setClauses = Object.keys(fields).map(k => `${k} = ?`).join(', ');
+        const values = Object.values(fields);
+        values.push(req.user.id);
+
+        db.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).run(...values);
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Helper middleware for admin-only endpoints
+function requireAdmin(req, res, next) {
+    if (req.user && req.user.role === 'admin') {
+        return next();
+    }
+    res.status(403).json({ error: 'Quyền truy cập bị từ chối. Chỉ dành cho Admin.' });
+}
+
+// GET /api/users — List all users (Admin only)
+app.get('/api/users', requireAdmin, (req, res) => {
+    try {
+        const users = db.prepare(`SELECT id, email, token, cloud_id, account_id, base_url, full_name, role, department, created_at FROM users ORDER BY id ASC`).all();
+        res.json({ users });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/users — Create new user (Admin only)
+app.post('/api/users', requireAdmin, (req, res) => {
+    try {
+        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department } = req.body;
+        if (!email || !token || !cloud_id || !account_id || !base_url) {
+            return res.status(400).json({ error: 'Thiếu các thông tin bắt buộc (email, token, cloud_id, account_id, base_url)' });
+        }
+
+        const pwd = password || 'ilovecds';
+        const userRole = role || 'client';
+
+        const info = db.prepare(`
+            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, new Date().toISOString());
+
+        res.json({ success: true, userId: info.lastInsertRowId });
+    } catch (e) {
+        if (e.message.includes('UNIQUE constraint failed')) {
+            return res.status(400).json({ error: 'Email này đã tồn tại trong hệ thống.' });
+        }
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// PUT /api/users/:id — Edit user details (Admin only)
+app.put('/api/users/:id', requireAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department } = req.body;
+        if (!email || !token || !cloud_id || !account_id || !base_url) {
+            return res.status(400).json({ error: 'Thiếu các thông tin bắt buộc' });
+        }
+
+        const existing = db.prepare(`SELECT * FROM users WHERE id = ?`).get(id);
+        if (!existing) {
+            return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+        }
+
+        // Handle password update: if not provided or empty, keep existing password
+        const pwd = (password && password.trim() !== '') ? password : existing.password;
+        const userRole = role || existing.role;
+
+        db.prepare(`
+            UPDATE users 
+            SET email = ?, password = ?, token = ?, cloud_id = ?, account_id = ?, base_url = ?, full_name = ?, role = ?, department = ?
+            WHERE id = ?
+        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, id);
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// DELETE /api/users/:id — Delete user (Admin only)
+app.delete('/api/users/:id', requireAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        if (parseInt(id) === req.user.id) {
+            return res.status(400).json({ error: 'Không thể tự xóa tài khoản của chính mình.' });
+        }
+
+        const count = db.prepare('SELECT count(*) as c FROM users').get().c;
+        if (count <= 1) {
+            return res.status(400).json({ error: 'Không thể xóa người dùng cuối cùng của hệ thống.' });
+        }
+
+        db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ─── Jira Dashboard & Operations Routes ────────────────────────────────────
+
 // GET /api/months — list available months from DB
 app.get('/api/months', (req, res) => {
     try {
-        const rows = db.prepare(`SELECT year_month FROM months ORDER BY year_month DESC`).all();
+        const rows = db.prepare(`SELECT year_month FROM months WHERE user_id = ? ORDER BY year_month DESC`).all(req.user.id);
         res.json({ months: rows.map(r => r.year_month) });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -432,7 +768,7 @@ app.get('/api/months', (req, res) => {
 // GET /api/data/:yearMonth — load data from DB
 app.get('/api/data/:yearMonth', (req, res) => {
     try {
-        const data = loadMonthData(req.params.yearMonth);
+        const data = loadMonthData(req.user.id, req.params.yearMonth);
         if (!data) return res.status(404).json({ error: 'no_data' });
         res.json(data);
     } catch (e) {
@@ -443,8 +779,8 @@ app.get('/api/data/:yearMonth', (req, res) => {
 // POST /api/refresh/:yearMonth — fetch fresh data from Jira and save to DB
 app.post('/api/refresh/:yearMonth', async (req, res) => {
     try {
-        if (!EMAIL || !API_TOKEN || API_TOKEN === 'YOUR_API_TOKEN_HERE') {
-            throw new Error('Chưa cấu hình ATLASSIAN_TOKEN trong file .env. Vui lòng tạo API token tại https://id.atlassian.com/manage-profile/security/api-tokens');
+        if (!req.user.token || !req.user.cloud_id || !req.user.account_id || !req.user.base_url) {
+            return res.status(400).json({ error: 'JIRA_MISSING_INFO' });
         }
 
         const [yearStr, monthStr] = req.params.yearMonth.split('-');
@@ -459,7 +795,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const d_today   = new Date();
         const today     = `${d_today.getFullYear()}-${pad(d_today.getMonth() + 1)}-${pad(d_today.getDate())}`;
 
-        console.log(`\n📡 Đang tải dữ liệu ${MONTH_NAMES_VI[month]}/${year}...`);
+        console.log(`\n📡 Đang tải dữ liệu cho ${req.user.full_name} (${MONTH_NAMES_VI[month]}/${year})...`);
         const t0 = Date.now();
 
         // ── Chạy song song 4 queries ──────────────────────────────────────
@@ -468,19 +804,23 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
 
         const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
             searchAll(
-                `worklogAuthor = '${ACCOUNT_ID}' AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'`,
+                req.user,
+                `worklogAuthor = '${req.user.account_id}' AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'`,
                 WL_FIELDS
             ),
             searchAll(
-                `assignee = '${ACCOUNT_ID}' AND status = Done AND updated >= '${startDate}' AND updated <= '${endDate}'`,
+                req.user,
+                `assignee = '${req.user.account_id}' AND status = Done AND updated >= '${startDate}' AND updated <= '${endDate}'`,
                 DONE_FIELDS
             ),
             searchAll(
-                `assignee = '${ACCOUNT_ID}' AND status = 'In Progress' AND status != CANCELLED`,
+                req.user,
+                `assignee = '${req.user.account_id}' AND status = 'In Progress' AND status != CANCELLED`,
                 DONE_FIELDS
             ),
             searchAll(
-                `assignee = '${ACCOUNT_ID}' AND status = 'To Do' AND status != CANCELLED`,
+                req.user,
+                `assignee = '${req.user.account_id}' AND status = 'To Do' AND status != CANCELLED`,
                 DONE_FIELDS
             )
         ]);
@@ -495,11 +835,11 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         wlIssues.forEach(issue => {
             const wls = issue.fields.worklog?.worklogs || [];
             wls.forEach(wl => {
-                if (wl.author.accountId !== ACCOUNT_ID) return;
+                if (wl.author.accountId !== req.user.account_id) return;
                 const wlDate = new Date(wl.started);
                 const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
                 if (logDate >= startDate && logDate <= endDate && dailySecMap[logDate] !== undefined) {
-                    dailySecMap[logDate] += wl.timeSpentSeconds;
+                     dailySecMap[logDate] += wl.timeSpentSeconds;
                 }
             });
         });
@@ -507,7 +847,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         // ── Process done tasks ─────────────────────────────────────────────
         const tasks = doneIssues.map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
-            const userWls = allWls.filter(w => w.author.accountId === ACCOUNT_ID);
+            const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
             const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
             let resolvedDate = null;
             if (issue.fields.resolutiondate) {
@@ -547,7 +887,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 time_spent_hours: secToH(totalSec),
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
                 has_worklog: userWls.length > 0,
-                url: `${BASE_URL}/browse/${issue.key}`,
+                url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: originalEstimate,
                 actual_start: actualStart,
                 actual_end: actualEnd,
@@ -567,7 +907,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             return created.substring(0, 7) === req.params.yearMonth;
         }).map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
-            const userWls = allWls.filter(w => w.author.accountId === ACCOUNT_ID);
+            const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
             const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
 
             return {
@@ -580,7 +920,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 time_spent_hours: secToH(totalSec),
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
                 has_worklog: userWls.length > 0,
-                url: `${BASE_URL}/browse/${issue.key}`,
+                url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: issue.fields.timeoriginalestimate || null,
                 actual_start: issue.fields.customfield_10008 || null,
                 actual_end: issue.fields.customfield_10009 || null,
@@ -604,7 +944,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             return created.substring(0, 7) === req.params.yearMonth;
         }).map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
-            const userWls = allWls.filter(w => w.author.accountId === ACCOUNT_ID);
+            const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
             const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
 
             return {
@@ -617,7 +957,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 time_spent_hours: secToH(totalSec),
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
                 has_worklog: userWls.length > 0,
-                url: `${BASE_URL}/browse/${issue.key}`,
+                url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: issue.fields.timeoriginalestimate || null,
                 actual_start: issue.fields.customfield_10008 || null,
                 actual_end: issue.fields.customfield_10009 || null,
@@ -670,13 +1010,16 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         };
 
         // ── Save to SQLite (single transaction) ───────────────────────────
-        saveMonthData(result);
+        saveMonthData(req.user.id, result);
 
         console.log(`  ✅ Xong! ${tasks.length} tasks Done, ${inProgressTasks.length} tasks In Progress, ${todoTasks.length} tasks To-do | ${totalLogged}h / ${standardHours}h`);
         res.json(result);
 
     } catch (e) {
         console.error('❌ Lỗi refresh:', e.message);
+        if (e.message === 'JIRA_401') {
+            return res.status(400).json({ error: 'JIRA_401' });
+        }
         res.status(500).json({ error: e.message });
     }
 });
@@ -685,7 +1028,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
 app.get('/api/issue/:issueKey/transitions', async (req, res) => {
     try {
         const { issueKey } = req.params;
-        const data = await jiraGet(`/issue/${issueKey}/transitions`);
+        const data = await jiraGet(req.user, `/issue/${issueKey}/transitions`);
         const transitions = (data.transitions || []).map(t => ({
             id: t.id,
             name: t.name,
@@ -705,7 +1048,7 @@ app.post('/api/issue/:issueKey/transition', async (req, res) => {
         if (!transitionId) {
             return res.status(400).json({ error: 'Thiếu transitionId' });
         }
-        await jiraPost(`/issue/${issueKey}/transitions`, {
+        await jiraPost(req.user, `/issue/${issueKey}/transitions`, {
             transition: { id: transitionId }
         });
         res.json({ success: true });
@@ -725,7 +1068,7 @@ app.post('/api/issue/:issueKey/worklog', async (req, res) => {
         const payload = { timeSpent };
         if (started) payload.started = started;
         if (comment) payload.comment = makeAdfComment(comment);
-        await jiraPost(`/issue/${issueKey}/worklog`, payload);
+        await jiraPost(req.user, `/issue/${issueKey}/worklog`, payload);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -754,7 +1097,7 @@ app.post('/api/issue/:issueKey/update-fields', async (req, res) => {
         if (actualEnd !== undefined) fields.customfield_10009 = actualEnd || null;
 
         console.log(`📡 Đang cập nhật fields cho task ${issueKey}:`, fields);
-        await jiraPut(`/issue/${issueKey}`, { fields });
+        await jiraPut(req.user, `/issue/${issueKey}`, { fields });
         res.json({ success: true });
     } catch (e) {
         console.error(`❌ Lỗi cập nhật fields cho task ${req.params.issueKey}:`, e.message);
@@ -773,7 +1116,7 @@ async function start() {
         console.log('║   🚀 JiraBot Time Report Server          ║');
         console.log(`║   http://localhost:${PORT}                   ║`);
         console.log('╚══════════════════════════════════════════╝\n');
-        if (!API_TOKEN || API_TOKEN === 'YOUR_API_TOKEN_HERE') {
+        if (!process.env.ATLASSIAN_TOKEN || process.env.ATLASSIAN_TOKEN === 'YOUR_API_TOKEN_HERE') {
             console.log('⚠️  Chưa cấu hình API token trong .env!');
             console.log('   Truy cập: https://id.atlassian.com/manage-profile/security/api-tokens\n');
         }
