@@ -297,32 +297,35 @@ function initDb() {
     `);
 
     // Seed default admin user from .env if table is empty
-    const defaultEmail = process.env.ATLASSIAN_EMAIL || 'admin@example.com';
+    const defaultEmail    = process.env.ADMIN_EMAIL    || 'admin@jirabot.local';
+    const defaultPassword = process.env.ADMIN_PASSWORD || 'ilovecds';
+    const defaultFullName = process.env.ADMIN_FULLNAME || 'Administrator';
+    const defaultDept     = process.env.ADMIN_DEPARTMENT || '';
+    const defaultToken    = process.env.ATLASSIAN_TOKEN    || '';
+    const defaultCloudId  = process.env.ATLASSIAN_CLOUD_ID || '';
+    const defaultAccId    = process.env.ATLASSIAN_ACCOUNT_ID || '';
+    const defaultBaseUrl  = process.env.ATLASSIAN_BASE_URL || '';
+
     const count = db.prepare('SELECT count(*) as c FROM users').get().c;
     if (count === 0) {
-        const defaultToken = process.env.ATLASSIAN_TOKEN || '';
-        const defaultCloudId = process.env.ATLASSIAN_CLOUD_ID || 'eb9eb013-c13d-4c58-8af5-a442ed90f2f0';
-        const defaultAccountId = process.env.ATLASSIAN_ACCOUNT_ID || '712020:d8b2807a-adfc-42a8-9ba7-a3e22f01d907';
-        const defaultBaseUrl = process.env.ATLASSIAN_BASE_URL || 'https://pvqpm.atlassian.net';
-
         db.prepare(`
             INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
             defaultEmail,
-            'ilovecds',
+            defaultPassword,
             defaultToken,
             defaultCloudId,
-            defaultAccountId,
+            defaultAccId,
             defaultBaseUrl,
-            'Hoàng Bình Quân',
+            defaultFullName,
             'admin',
-            'Acorneri IT',
+            defaultDept,
             new Date().toISOString()
         );
-        console.log('  👤 Seeded default admin user from .env credentials:', defaultEmail);
+        console.log('  👤 Seeded default admin:', defaultEmail);
     } else {
-        // Ensure the seeded admin user has 'admin' role
+        // Ensure the designated admin email always has admin role
         db.prepare(`UPDATE users SET role = 'admin' WHERE email = ?`).run(defaultEmail);
     }
 
