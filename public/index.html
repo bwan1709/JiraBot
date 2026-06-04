@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⏱ JiraBot — Time Spent Tracker</title>
+    <meta name="description" content="Theo dõi thời gian làm việc Jira theo tháng">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:           #0b0d14;
+            --surface:      rgba(255,255,255,0.035);
+            --surface-2:    rgba(255,255,255,0.06);
+            --border:       rgba(255,255,255,0.08);
+            --border-2:     rgba(255,255,255,0.14);
+            --text:         #e2e8f0;
+            --muted:        #7c8db5;
+            --purple:       #8b5cf6;
+            --purple-l:     #a78bfa;
+            --purple-d:     rgba(139,92,246,0.15);
+            --indigo:       #6366f1;
+            --green:        #10b981;
+            --green-d:      rgba(16,185,129,0.12);
+            --red:          #f43f5e;
+            --red-d:        rgba(244,63,94,0.12);
+            --yellow:       #f59e0b;
+            --yellow-d:     rgba(245,158,11,0.12);
+            --blue:         #3b82f6;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px 20px 40px;
+        }
+
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(ellipse 70% 50% at 0% 0%, rgba(139,92,246,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 100% 100%, rgba(99,102,241,0.05) 0%, transparent 60%);
+        }
+
+        .container { max-width: 1300px; margin: 0 auto; position: relative; z-index: 1; }
+
+        /* ── Loading Overlay ── */
+        #loading-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(11,13,20,0.85); backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 16px; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+        }
+        #loading-overlay.active { opacity: 1; pointer-events: all; }
+
+        .spinner {
+            width: 44px; height: 44px;
+            border: 3px solid rgba(139,92,246,0.2);
+            border-top-color: var(--purple);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text { font-size: 15px; font-weight: 600; color: var(--muted); }
+
+        /* ── Header ── */
+        .header {
+            display: flex; align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px; gap: 16px;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 14px; }
+
+        .logo {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-shrink: 0;
+            box-shadow: 0 0 20px rgba(139,92,246,0.35);
+        }
+
+        .header-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+        .header-sub   { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+        .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+        /* ── Month Tabs ── */
+        .month-tabs-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+        }
+
+        .month-tab {
+            flex-shrink: 0;
+            padding: 7px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+            background: none;
+            white-space: nowrap;
+        }
+
+        .month-tab:hover  { color: var(--text); background: var(--surface-2); }
+        .month-tab.active {
+            color: var(--purple-l);
+            background: var(--purple-d);
+            border-color: rgba(139,92,246,0.3);
+        }
+
+        .tabs-spacer { flex: 1; }
+
+        .add-month-btn {
+            flex-shrink: 0;
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            border: 1px dashed var(--border-2);
+            background: none;
+            transition: all 0.15s;
+        }
+        .add-month-btn:hover { color: var(--text); border-color: var(--purple); }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 18px; border-radius: 12px;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; border: none;
+            transition: all 0.15s; white-space: nowrap;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(124,58,237,0.35);
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(124,58,237,0.5);
+        }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .btn-ghost {
+            background: var(--surface);
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+
+        .btn-spinning .btn-icon { animation: spin 0.6s linear infinite; }
+
+        /* ── Empty State ── */
+        #empty-state {
+            display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            padding: 80px 40px; text-align: center;
+            background: var(--surface);
+            border: 1px solid var(--border); border-radius: 24px;
+            margin: 20px 0;
+        }
+        #empty-state.visible { display: flex; }
+
+        .empty-icon { font-size: 52px; margin-bottom: 16px; opacity: 0.7; }
+        .empty-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+        .empty-desc { font-size: 13px; color: var(--muted); max-width: 380px; line-height: 1.7; margin-bottom: 24px; }
+
+        /* ── Dashboard ── */
+        #dashboard { display: none; }
+        #dashboard.visible { display: block; }
+
+        /* ── Last updated bar ── */
+        .update-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 10px 16px; margin-bottom: 20px;
+            font-size: 12px; color: var(--muted);
+        }
+
+        .update-bar strong { color: var(--text); }
+
+        /* ── Stats Grid ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px; margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 18px; padding: 18px 16px;
+            position: relative; overflow: hidden;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 2px; border-radius: 18px 18px 0 0;
+        }
+        .stat-card.c-std::before    { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
+        .stat-card.c-log::before    { background: linear-gradient(90deg, #10b981, #059669); }
+        .stat-card.c-net-neg::before { background: linear-gradient(90deg, #f43f5e, #e11d48); }
+        .stat-card.c-net-pos::before { background: linear-gradient(90deg, #10b981, #34d399); }
+        .stat-card.c-pct::before    { background: linear-gradient(90deg, #3b82f6, #6366f1); }
+        .stat-card.c-tasks::before  { background: linear-gradient(90deg, #f59e0b, #f97316); }
+
+        .stat-card:hover { background: var(--surface-2); transform: translateY(-2px); }
+
+        .stat-icon  { font-size: 18px; margin-bottom: 8px; }
+        .stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                      letter-spacing: 0.07em; color: var(--muted); margin-bottom: 5px; }
+        .stat-value { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
+        .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+        .stat-card.c-std     .stat-value { color: #a78bfa; }
+        .stat-card.c-log     .stat-value { color: #34d399; }
+        .stat-card.c-net-neg .stat-value { color: #fb7185; }
+        .stat-card.c-net-pos .stat-value { color: #34d399; }
+        .stat-card.c-pct     .stat-value { color: #60a5fa; }
+        .stat-card.c-tasks   .stat-value { color: #fbbf24; }
+
+        /* ── Progress Bars ── */
+        .progress-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 18px; padding: 20px 24px; margin-bottom: 16px;
+        }
+
+        .progress-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-title { font-size: 13px; font-weight: 700; }
+        .section-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+        .pb-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .pb-label { font-size: 11px; color: var(--muted); width: 150px; flex-shrink: 0; font-weight: 500; }
+
+        .pb-track {
+            flex: 1; height: 9px;
+            background: rgba(255,255,255,0.06); border-radius: 100px; overflow: hidden;
+        }
+
+        .pb-fill { height: 100%; border-radius: 100px; transition: width 1s cubic-bezier(.4,0,.2,1); }
+        .pb-logged   { background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa); box-shadow: 0 0 10px rgba(139,92,246,0.4); }
+        .pb-required { background: rgba(244,63,94,0.5); }
+        .pb-ghost    { background: rgba(255,255,255,0.05); }
+
+        .pb-pct { font-size: 11px; color: var(--muted); width: 38px; text-align: right; font-weight: 700; flex-shrink: 0; }
+
+        /* ── Charts ── */
+        .charts-row {
+            display: grid; grid-template-columns: 3fr 1fr;
+            gap: 12px; margin-bottom: 12px;
+        }
+
+        .chart-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 18px; padding: 20px;
+        }
+
+        .chart-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .chart-legend {
+            display: flex; gap: 12px; font-size: 10px; color: var(--muted);
+            flex-wrap: wrap; justify-content: flex-end;
+        }
+
+        .legend-dot {
+            display: inline-block; width: 7px; height: 7px;
+            border-radius: 50%; margin-right: 4px;
+        }
+
+        .chart-card-full {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 18px; padding: 20px; margin-bottom: 16px;
+        }
+
+        /* ── Task Table ── */
+        .table-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 18px; padding: 20px; margin-bottom: 16px;
+        }
+
+        .table-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .task-tabs {
+            display: flex; gap: 4px; background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border); padding: 3px; border-radius: 10px;
+        }
+
+        .task-tab-btn {
+            background: none; color: var(--muted); border: 1px solid transparent;
+            border-radius: 8px; padding: 4px 12px; font-size: 11px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .task-tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+
+        .task-tab-btn.active {
+            color: var(--purple-l); background: var(--purple-d);
+            border-color: rgba(139,92,246,0.25);
+        }
+
+        .count-badge {
+            background: var(--purple-d); border: 1px solid rgba(139,92,246,0.25);
+            border-radius: 100px; padding: 2px 10px;
+            font-size: 11px; font-weight: 700; color: var(--purple-l);
+        }
+
+        /* ── Project Tabs ── */
+        .project-tabs-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 0 16px 0;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed var(--border);
+            overflow-x: auto;
+            flex-wrap: nowrap;
+        }
+
+        .project-tab-btn {
+            background: rgba(255,255,255,0.02);
+            color: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .project-tab-btn:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.05);
+            border-color: var(--border-2);
+        }
+
+        .project-tab-btn.active {
+            color: var(--purple-l);
+            background: var(--purple-d);
+            border-color: rgba(139,92,246,0.3);
+        }
+
+        /* ── Pagination ── */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.005);
+        }
+
+        .page-btn {
+            background: rgba(255,255,255,0.02);
+            color: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            color: var(--text);
+            background: rgba(255,255,255,0.05);
+            border-color: var(--border-2);
+        }
+
+        .page-btn.active {
+            color: var(--purple-l);
+            background: var(--purple-d);
+            border-color: rgba(139,92,246,0.3);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 11px;
+            color: var(--muted);
+            margin: 0 8px;
+        }
+
+        .table-scroll { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; min-width: 680px; }
+
+        th {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--muted);
+            padding: 8px 12px; text-align: left;
+            border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+
+        td {
+            padding: 11px 12px; font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .key-link {
+            font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700;
+            color: var(--purple-l); text-decoration: none; white-space: nowrap;
+        }
+        .key-link:hover { text-decoration: underline; }
+
+        .task-summary { max-width: 340px; font-size: 12px; }
+
+        .badge {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px; border-radius: 100px;
+            font-size: 10px; font-weight: 600; white-space: nowrap;
+        }
+        .badge-done     { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+        .badge-subtask  { background: rgba(99,102,241,0.12); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
+        .badge-no-log   { background: var(--red-d); color: #fb7185; border: 1px solid rgba(244,63,94,0.2); }
+        .badge-inprogress { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+        .badge-inqa       { background: rgba(139,92,246,0.1); color: #a78bfa; border: 1px solid rgba(139,92,246,0.2); }
+        .badge-cancelled  { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid rgba(255,255,255,0.08); }
+        .badge-todo       { background: rgba(255,255,255,0.05); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); }
+
+        .time-ok      { color: #34d399; font-weight: 700; }
+        .time-missing { color: #fb7185; font-weight: 700; }
+
+        .table-footer {
+            display: flex; justify-content: flex-end; align-items: center;
+            gap: 16px; margin-top: 14px; padding-top: 14px;
+            border-top: 1px solid var(--border);
+            font-size: 12px; color: var(--muted);
+        }
+
+        .total-hours { font-size: 22px; font-weight: 900; color: #34d399; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(11,13,20,0.8); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s; pointer-events: none;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+
+        .modal {
+            background: #141722; border: 1px solid var(--border-2);
+            border-radius: 20px; padding: 28px; width: 380px;
+            transform: scale(0.95); transition: transform 0.2s;
+        }
+        .modal-overlay.active .modal { transform: scale(1); }
+
+        .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+        .modal-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+        .form-row { margin-bottom: 14px; }
+        .form-label { display: block; font-size: 11px; font-weight: 600;
+                      text-transform: uppercase; letter-spacing: 0.06em;
+                      color: var(--muted); margin-bottom: 7px; }
+
+        .form-input {
+            width: 100%; padding: 10px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-2); border-radius: 10px;
+            color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif;
+            outline: none; transition: border-color 0.15s;
+        }
+        .form-input:focus { border-color: var(--purple); }
+        .form-input option {
+            background-color: #141722;
+            color: var(--text);
+        }
+
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            padding: 12px 18px; border-radius: 12px;
+            font-size: 13px; font-weight: 600;
+            transform: translateY(80px); opacity: 0;
+            transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+            max-width: 380px;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        #toast.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+        #toast.error   { background: rgba(244,63,94,0.15);  border: 1px solid rgba(244,63,94,0.3);  color: #fb7185; }
+        #toast.info    { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #818cf8; }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center; color: var(--muted); font-size: 11px;
+            padding-top: 20px; border-top: 1px solid var(--border);
+        }
+        .footer-pills { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .footer-pill {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 3px 10px; font-size: 11px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 960px) {
+            .stats-grid   { grid-template-columns: repeat(3, 1fr); }
+            .charts-row   { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .stats-grid   { grid-template-columns: repeat(2, 1fr); }
+            .header       { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Đang tải dữ liệu...</div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ── Modal: Add Month ── -->
+<div class="modal-overlay" id="add-modal">
+    <div class="modal">
+        <div class="modal-title">📅 Thêm tháng mới</div>
+        <div class="modal-sub">Nhập tháng muốn theo dõi. Dữ liệu sẽ được tải từ Jira.</div>
+        <div class="form-row">
+            <label class="form-label">Năm</label>
+            <input class="form-input" id="input-year" type="number" min="2024" max="2030" value="2026">
+        </div>
+        <div class="form-row">
+            <label class="form-label">Tháng</label>
+            <input class="form-input" id="input-month" type="number" min="1" max="12" value="" placeholder="1–12">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+            <button class="btn btn-primary" onclick="addMonth()">✨ Thêm &amp; Cập nhật</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Log Work (Đánh workload) ── -->
+<div class="modal-overlay" id="worklog-modal">
+    <div class="modal" style="width: 420px;">
+        <div class="modal-title">⏱ Ghi nhận thời gian (Log Work)</div>
+        <div class="modal-sub" id="worklog-modal-sub">Log work cho task</div>
+        <input type="hidden" id="worklog-task-key">
+        <div class="form-row">
+            <label class="form-label">Thời gian làm việc *</label>
+            <input class="form-input" id="worklog-time" type="text" placeholder="Ví dụ: 2h, 45m, 1h 30m" required>
+        </div>
+        <div class="form-row">
+            <label class="form-label">Ghi chú (Comment)</label>
+            <textarea class="form-input" id="worklog-comment" style="height: 80px; resize: none;" placeholder="Mô tả công việc đã làm..."></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeWorklogModal()">Hủy</button>
+            <button class="btn btn-primary" onclick="submitWorklog()">💾 Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Change Status (Đổi trạng thái) ── -->
+<div class="modal-overlay" id="status-modal">
+    <div class="modal" style="width: 380px;">
+        <div class="modal-title">🔄 Đổi trạng thái Task</div>
+        <div class="modal-sub" id="status-modal-sub">Chuyển trạng thái cho task</div>
+        <input type="hidden" id="status-task-key">
+        <div class="form-row">
+            <label class="form-label">Trạng thái mới *</label>
+            <select class="form-input" id="status-select">
+                <option value="">Đang tải danh sách trạng thái...</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeStatusModal()">Hủy</button>
+            <button class="btn btn-primary" id="status-submit-btn" onclick="submitStatusTransition()" disabled>🔄 Thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Edit Fields (Sửa thông tin bắt buộc) ── -->
+<div class="modal-overlay" id="edit-fields-modal">
+    <div class="modal" style="width: 480px; max-height: 85vh; display: flex; flex-direction: column;">
+        <div class="modal-title">✏️ Chỉnh sửa thông tin Task</div>
+        <div class="modal-sub" id="edit-fields-modal-sub">Cập nhật thông tin cho task</div>
+        <input type="hidden" id="edit-fields-task-key">
+        
+        <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+            <div class="form-row" id="edit-parent-container">
+                <label class="form-label">Parent Task Key (Chỉ cho Subtask)</label>
+                <input class="form-input" id="edit-parent-key" type="text" placeholder="Ví dụ: EXDMS-2500">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Original Estimate (Ước lượng thời gian ban đầu)</label>
+                <input class="form-input" id="edit-original-estimate" type="text" placeholder="Ví dụ: 1d, 4h, 2h 30m">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Story Point Estimate (Điểm Story Point)</label>
+                <input class="form-input" id="edit-story-points" type="number" step="0.5" placeholder="Ví dụ: 1, 2, 3, 5">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Nhãn (Labels) - phân tách bằng dấu phẩy</label>
+                <input class="form-input" id="edit-labels" type="text" placeholder="Ví dụ: DMS-SP, UAT-Bug">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Start Date (Ngày bắt đầu)</label>
+                <input class="form-input" id="edit-start-date" type="date">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Due Date (Hạn chót)</label>
+                <input class="form-input" id="edit-due-date" type="date">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Actual Start (Thời điểm thực tế bắt đầu)</label>
+                <input class="form-input" id="edit-actual-start" type="datetime-local">
+            </div>
+            
+            <div class="form-row">
+                <label class="form-label">Actual End (Thời điểm thực tế hoàn thành)</label>
+                <input class="form-input" id="edit-actual-end" type="datetime-local">
+            </div>
+        </div>
+        
+        <div class="modal-actions" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 15px;">
+            <button class="btn btn-ghost" onclick="closeEditFieldsModal()">Hủy</button>
+            <button class="btn btn-primary" onclick="submitEditFields()">💾 Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- ── HEADER ── -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">⏱</div>
+            <div>
+                <div class="header-title">JiraBot Time Tracker</div>
+                <div class="header-sub">Quân Hoàng · hoangbinhquan179@gmail.com</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-ghost" onclick="openModal()" id="btn-add-month">
+                <span>＋</span> Thêm tháng
+            </button>
+            <button class="btn btn-primary" id="btn-refresh" onclick="refresh()">
+                <span class="btn-icon" id="refresh-icon">🔄</span>
+                <span id="refresh-label">Cập nhật</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── MONTH TABS ── -->
+    <div class="month-tabs-wrapper" id="month-tabs">
+        <span style="font-size:12px;color:var(--muted);padding:0 8px;">Đang tải...</span>
+    </div>
+
+    <!-- ── EMPTY STATE ── -->
+    <div id="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title" id="empty-title">Chưa có dữ liệu</div>
+        <div class="empty-desc" id="empty-desc">
+            Nhấn <strong>"Cập nhật"</strong> để tải dữ liệu từ Jira cho tháng này.
+        </div>
+        <button class="btn btn-primary" onclick="refresh()">
+            <span>🔄</span> Cập nhật ngay
+        </button>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="dashboard">
+        <!-- Update bar -->
+        <div class="update-bar">
+            <span id="update-info">Cập nhật lần cuối: —</span>
+            <span id="update-today" style="color:var(--purple-l)"></span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid"></div>
+
+        <!-- Progress bars -->
+        <div class="progress-card">
+            <div class="progress-header">
+                <div>
+                    <div class="section-title">📊 Tiến độ tháng</div>
+                    <div class="section-sub">So sánh giờ đã log vs giờ cần đạt tính đến hôm nay</div>
+                </div>
+                <div id="progress-legend" class="chart-legend"></div>
+            </div>
+            <div id="progress-bars"></div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="section-title">📅 Log theo ngày</div>
+                        <div class="section-sub">Giờ chuẩn vs thực tế đã log</div>
+                    </div>
+                    <div class="chart-legend">
+                        <span><span class="legend-dot" style="background:#14b8a6"></span>Đạt/Thừa</span>
+                        <span><span class="legend-dot" style="background:#f59e0b"></span>Thiếu 1 phần</span>
+                        <span><span class="legend-dot" style="background:#f43f5e"></span>Chưa log</span>
+                        <span><span style="display:inline-block;width:14px;height:10px;background:repeating-linear-gradient(135deg,rgba(37,99,235,0.85) 0px,rgba(37,99,235,0.85) 4px,rgba(255,255,255,0.25) 4px,rgba(255,255,255,0.25) 6px);border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Vượt chuẩn</span>
+                        <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed rgba(99,102,241,0.7);vertical-align:middle;margin-right:3px;"></span>Mức chuẩn</span>
+                    </div>
+                </div>
+                <canvas id="chart-daily" height="100"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="section-title">📈 Lũy kế</div>
+                        <div class="section-sub">Tích lũy giờ theo ngày</div>
+                    </div>
+                </div>
+                <canvas id="chart-cumulative" height="220"></canvas>
+            </div>
+        </div>
+
+        <!-- Deficit/Surplus chart -->
+        <div class="chart-card-full">
+            <div class="chart-header">
+                <div>
+                    <div class="section-title">⚖️ Thiếu / Thừa từng ngày</div>
+                    <div class="section-sub">+ = thừa giờ &nbsp;|&nbsp; − = thiếu giờ</div>
+                </div>
+                <div id="net-total-label" style="font-size:13px;font-weight:700;"></div>
+            </div>
+            <canvas id="chart-deficit" height="65"></canvas>
+        </div>
+
+        <!-- Task table -->
+        <div class="table-card">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="section-title">📋 Danh sách Tasks</div>
+                    <div class="task-tabs">
+                        <button class="task-tab-btn active" id="tab-done" onclick="switchTaskTab('done')">
+                            Done <span class="count-badge" id="done-badge" style="background:rgba(255,255,255,0.06); border:none; color:var(--muted); font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
+                        </button>
+                        <button class="task-tab-btn" id="tab-inprogress" onclick="switchTaskTab('inprogress')">
+                            In Progress <span class="count-badge" id="inprogress-badge" style="background:rgba(255,255,255,0.06); border:none; color:var(--muted); font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
+                        </button>
+                        <button class="task-tab-btn" id="tab-todo" onclick="switchTaskTab('todo')">
+                            To-do <span class="count-badge" id="todo-badge" style="background:rgba(255,255,255,0.06); border:none; color:var(--muted); font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
+                        </button>
+                        <button class="task-tab-btn" id="tab-missing" onclick="switchTaskTab('missing')">
+                            ⚠️ Thiếu thông tin <span class="count-badge" id="missing-badge" style="background:rgba(244,63,94,0.15); border:none; color:#fb7185; font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
+                        </button>
+                    </div>
+                </div>
+                <span class="count-badge" id="task-count">0 tasks</span>
+            </div>
+            <!-- Project Tabs Sub-Filter -->
+            <div class="project-tabs-wrapper" id="project-tabs" style="display: none;"></div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr id="task-thead-tr">
+                            <th>#</th>
+                            <th>Key</th>
+                            <th>Summary</th>
+                            <th>Project</th>
+                            <th>Loại</th>
+                            <th>Ngày Done</th>
+                            <th>Time Spent</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-tbody"></tbody>
+                </table>
+            </div>
+            <!-- Dynamic Pagination Controls -->
+            <div class="pagination-wrapper" id="pagination-controls" style="display: none;"></div>
+            <div class="table-footer">
+                <span>Tổng giờ có worklog:</span>
+                <span class="total-hours" id="total-hours-display">0h</span>
+                <span id="total-hours-sub" style="color:var(--muted)"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-pills">
+            <span class="footer-pill">📅 T2–T6: 8h/ngày</span>
+            <span class="footer-pill">☀️ T7: 4h/ngày (sáng)</span>
+            <span class="footer-pill">💤 CN: Nghỉ</span>
+        </div>
+        <div>JiraBot Time Tracker · Quân Hoàng</div>
+    </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentMonth = null;
+let availableMonths = [];
+let charts = { daily: null, cumul: null, deficit: null };
+let currentData = null;
+let activeTaskTab = 'done';
+let activeProject = 'all';
+let currentPage = 1;
+const PAGE_SIZE = 20;
+
+const C = {
+    green:   '#10b981', greenA:  'rgba(16,185,129,0.75)',
+    red:     '#f43f5e', redA:    'rgba(244,63,94,0.75)',
+    yellow:  '#f59e0b', yellowA: 'rgba(245,158,11,0.75)',
+    indigo:  '#6366f1', indigoA: 'rgba(99,102,241,0.15)',
+    purple:  '#8b5cf6',
+    grid:    'rgba(255,255,255,0.05)',
+    tick:    '#7c8db5',
+    tbg:     'rgba(11,13,20,0.97)',
+    tbd:     'rgba(255,255,255,0.08)',
+};
+
+const tooltipBase = {
+    backgroundColor: C.tbg, borderColor: C.tbd, borderWidth: 1,
+    titleColor: '#e2e8f0', bodyColor: '#7c8db5',
+    padding: 10, cornerRadius: 10,
+};
+const scalesBase = {
+    x: { ticks: { color: C.tick, font: { size: 9, family: 'Inter' }, maxRotation: 0 }, grid: { color: C.grid } },
+    y: { ticks: { color: C.tick, font: { size: 10, family: 'Inter' } }, grid: { color: C.grid } }
+};
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+
+function fmtH(h) {
+    if (h == null || h === 0) return '0h';
+    const hh = Math.floor(Math.abs(h));
+    const mm = Math.round((Math.abs(h) - hh) * 60);
+    const prefix = h < 0 ? '-' : '';
+    return mm === 0 ? `${prefix}${hh}h` : `${prefix}${hh}h ${mm}m`;
+}
+
+function fmtDate(str) {
+    if (!str) return '—';
+    const [y, m, d] = str.split('-');
+    return `${d}/${m}/${y}`;
+}
+
+function showToast(msg, type = 'info', duration = 3500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    setTimeout(() => { t.className = ''; }, duration);
+}
+
+function setLoading(active, text = 'Đang tải...') {
+    const el = document.getElementById('loading-overlay');
+    document.getElementById('loading-text').textContent = text;
+    el.classList.toggle('active', active);
+}
+
+function setRefreshBtnState(loading) {
+    const btn = document.getElementById('btn-refresh');
+    const label = document.getElementById('refresh-label');
+    btn.disabled = loading;
+    btn.classList.toggle('btn-spinning', loading);
+    label.textContent = loading ? 'Đang cập nhật...' : 'Cập nhật';
+    // Fade stats nhẹ thay vì che toàn màn hình
+    const grid = document.getElementById('stats-grid');
+    if (grid) grid.style.transition = 'opacity 0.2s';
+    if (grid) grid.style.opacity   = loading ? '0.45' : '1';
+    const bar = document.getElementById('update-info');
+    if (bar && loading) bar.textContent = '⏳ Đang kéo dữ liệu từ Jira...';
+}
+
+// ── Month tabs ─────────────────────────────────────────────────────────────
+
+function renderMonthTabs(months, activeMonth) {
+    const wrapper = document.getElementById('month-tabs');
+    if (months.length === 0) {
+        wrapper.innerHTML = `<span style="font-size:12px;color:var(--muted);padding:0 8px;">Chưa có tháng nào. Nhấn "Thêm tháng" để bắt đầu.</span>`;
+        return;
+    }
+    const tabs = months.map(m => {
+        const [y, mo] = m.split('-');
+        const MO_VI = ['','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+        const label = `${MO_VI[parseInt(mo)]}/${y}`;
+        const isActive = m === activeMonth;
+        return `<button class="month-tab ${isActive ? 'active' : ''}" onclick="switchMonth('${m}')">${label}</button>`;
+    }).join('');
+    wrapper.innerHTML = tabs;
+}
+
+// ── Load & Init ────────────────────────────────────────────────────────────
+
+async function init() {
+    try {
+        const res = await fetch(`/api/months?t=${Date.now()}`);
+        const { months } = await res.json();
+        availableMonths = months;
+
+        if (months.length > 0) {
+            // Ưu tiên tháng hiện tại, fallback về tháng gần nhất nếu chưa có cache
+            const now = new Date();
+            const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            currentMonth = months.includes(thisMonth) ? thisMonth : months[0];
+            renderMonthTabs(months, currentMonth);
+            await loadData(currentMonth);
+        } else {
+            renderMonthTabs([], null);
+            showEmptyState('Chưa có tháng nào', 'Nhấn <strong>"Thêm tháng"</strong> để bắt đầu theo dõi.');
+        }
+    } catch (e) {
+        showToast('Không thể kết nối đến server. Hãy chắc chắn server đang chạy.', 'error', 5000);
+        showEmptyState('Không thể kết nối', 'Server chưa chạy. Mở terminal và chạy lệnh: <code>node server.js</code>');
+    }
+}
+
+async function switchMonth(ym) {
+    if (ym === currentMonth) return;
+    currentMonth = ym;
+    activeProject = 'all';
+    renderMonthTabs(availableMonths, currentMonth);
+    await loadData(ym);
+}
+
+async function loadData(ym) {
+    try {
+        const res = await fetch(`/api/data/${ym}?t=${Date.now()}`);
+        if (!res.ok) {
+            const err = await res.json();
+            if (err.error === 'no_data') {
+                showEmptyState('Chưa có dữ liệu', `Nhấn <strong>"Cập nhật"</strong> để tải dữ liệu tháng ${ym} từ Jira.`);
+            }
+            return;
+        }
+        const data = await res.json();
+        render(data);
+    } catch (e) {
+        showEmptyState('Lỗi tải dữ liệu', e.message);
+    }
+}
+
+async function refresh() {
+    if (!currentMonth) {
+        showToast('Vui lòng chọn hoặc thêm tháng trước.', 'info');
+        return;
+    }
+    setRefreshBtnState(true);
+    // Không dùng overlay — cập nhật live ngay khi có data
+    try {
+        const res = await fetch(`/api/refresh/${currentMonth}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        render(data);   // ← cập nhật dashboard ngay lập tức
+        showToast(`✅ Cập nhật thành công! ${data.task_count} tasks · ${fmtH(data.total_logged)}h logged`, 'success');
+        // refresh month list in case this is new
+        const mRes = await fetch(`/api/months?t=${Date.now()}`);
+        const { months } = await mRes.json();
+        availableMonths = months;
+        renderMonthTabs(months, currentMonth);
+    } catch (e) {
+        showToast(`❌ Lỗi: ${e.message}`, 'error', 6000);
+    } finally {
+        setRefreshBtnState(false);
+    }
+}
+
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+
+function openModal() {
+    const now = new Date();
+    document.getElementById('input-year').value = now.getFullYear();
+    document.getElementById('input-month').value = now.getMonth() + 1;
+    document.getElementById('add-modal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('add-modal').classList.remove('active');
+}
+
+async function addMonth() {
+    const year  = parseInt(document.getElementById('input-year').value);
+    const month = parseInt(document.getElementById('input-month').value);
+    if (!year || !month || month < 1 || month > 12) {
+        showToast('Vui lòng nhập năm và tháng hợp lệ.', 'error');
+        return;
+    }
+    const ym = `${year}-${String(month).padStart(2,'0')}`;
+    closeModal();
+    currentMonth = ym;
+    if (!availableMonths.includes(ym)) {
+        availableMonths = [ym, ...availableMonths].sort().reverse();
+    }
+    renderMonthTabs(availableMonths, currentMonth);
+    await refresh();
+}
+
+document.getElementById('add-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+});
+
+// ── Show/hide states ───────────────────────────────────────────────────────
+
+function showEmptyState(title, desc) {
+    document.getElementById('empty-title').textContent = title;
+    document.getElementById('empty-desc').innerHTML = desc;
+    document.getElementById('empty-state').classList.add('visible');
+    document.getElementById('dashboard').classList.remove('visible');
+}
+
+function showDashboard() {
+    document.getElementById('empty-state').classList.remove('visible');
+    document.getElementById('dashboard').classList.add('visible');
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+
+function render(data) {
+    currentData = data;
+    showDashboard();
+    renderUpdateBar(data);
+    renderStats(data);
+    renderProgress(data);
+    renderCharts(data);
+    renderTable();
+}
+
+function renderUpdateBar(data) {
+    const dt = new Date(data.last_updated);
+    const fmt = dt.toLocaleString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+    document.getElementById('update-info').innerHTML =
+        `Cập nhật lần cuối: <strong>${fmt}</strong> &nbsp;·&nbsp; ${data.month_label}`;
+
+    const net = data.net_to_date;
+    const netEl = document.getElementById('update-today');
+    if (net < 0) {
+        netEl.innerHTML = `⚠️ Đang thiếu <strong style="color:#fb7185">${fmtH(Math.abs(net))}</strong>`;
+        netEl.style.color = '#fb7185';
+    } else if (net > 0) {
+        netEl.innerHTML = `✅ Đang thừa <strong style="color:#34d399">+${fmtH(net)}</strong>`;
+        netEl.style.color = '#34d399';
+    } else {
+        netEl.innerHTML = `✅ <strong style="color:#34d399">Đúng chuẩn</strong>`;
+    }
+}
+
+function renderStats(data) {
+    const net = data.net_to_date;
+    const netClass = net < 0 ? 'c-net-neg' : 'c-net-pos';
+    const netIcon  = net < 0 ? '⚠️' : '✅';
+    const netLabel = net < 0 ? 'Đang Thiếu' : 'Đang Thừa';
+    const netValue = (net < 0 ? '' : '+') + fmtH(net);
+
+    // Count in-progress and to-do tasks filtered by current month (tasks created in this month)
+    const filteredInProgress = (data.in_progress_tasks || []).filter(t =>
+        t.created && t.created.substring(0, 7) === currentMonth
+    ).length;
+    const filteredTodo = (data.todo_tasks || []).filter(t =>
+        t.issue_type && t.issue_type.toLowerCase().includes('sub') &&
+        (t.status || '').toUpperCase() !== 'IDEA' &&
+        t.created && t.created.substring(0, 7) === currentMonth
+    ).length;
+    const grandTotal = data.task_count + filteredInProgress + filteredTodo;
+
+    document.getElementById('stats-grid').innerHTML = `
+        <div class="stat-card c-std">
+            <div class="stat-icon">📋</div>
+            <div class="stat-label">Giờ Chuẩn Tháng</div>
+            <div class="stat-value">${data.standard_hours}h</div>
+            <div class="stat-sub">Tiêu chuẩn ${data.month_label}</div>
+        </div>
+        <div class="stat-card c-log">
+            <div class="stat-icon">✅</div>
+            <div class="stat-label">Đã Log</div>
+            <div class="stat-value">${fmtH(data.total_logged)}</div>
+            <div class="stat-sub">Tổng tháng tính đến hôm nay</div>
+        </div>
+        <div class="stat-card ${netClass}">
+            <div class="stat-icon">${netIcon}</div>
+            <div class="stat-label">${netLabel}</div>
+            <div class="stat-value">${netValue}</div>
+            <div class="stat-sub">Cần: ${data.required_to_date}h | Đã log: ${fmtH(data.logged_to_date)}</div>
+        </div>
+        <div class="stat-card c-pct">
+            <div class="stat-icon">📈</div>
+            <div class="stat-label">Tiến Độ Tháng</div>
+            <div class="stat-value">${data.progress_pct}%</div>
+            <div class="stat-sub">${fmtH(data.total_logged)} / ${data.standard_hours}h</div>
+        </div>
+        <div class="stat-card c-tasks">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-label">Done / Tổng</div>
+            <div class="stat-value">${data.task_count}<span style="font-size:16px;font-weight:normal;color:var(--muted)"> / ${grandTotal}</span></div>
+            <div class="stat-sub">${data.task_count} done · ${filteredInProgress} in-progress · ${filteredTodo} to-do (tháng này)</div>
+        </div>
+    `;
+}
+
+function renderProgress(data) {
+    const pctLogged   = Math.min(100, data.total_logged / data.standard_hours * 100).toFixed(1);
+    const pctRequired = Math.min(100, data.required_to_date / data.standard_hours * 100).toFixed(1);
+    document.getElementById('progress-bars').innerHTML = `
+        <div class="pb-row">
+            <span class="pb-label">✅ Đã log (${fmtH(data.total_logged)})</span>
+            <div class="pb-track"><div class="pb-fill pb-logged" style="width:${pctLogged}%"></div></div>
+            <span class="pb-pct">${pctLogged}%</span>
+        </div>
+        <div class="pb-row">
+            <span class="pb-label">⏳ Cần đến hôm nay (${data.required_to_date}h)</span>
+            <div class="pb-track"><div class="pb-fill pb-required" style="width:${pctRequired}%"></div></div>
+            <span class="pb-pct">${pctRequired}%</span>
+        </div>
+        <div class="pb-row">
+            <span class="pb-label">📋 Mục tiêu tháng (${data.standard_hours}h)</span>
+            <div class="pb-track"><div class="pb-fill pb-ghost" style="width:100%"></div></div>
+            <span class="pb-pct">100%</span>
+        </div>
+    `;
+}
+
+function renderCharts(data) {
+    const today = data.today;
+    const wds = data.working_days;
+    const todayIdx = wds.findIndex(d => d.date === today);
+    const pastDays = wds.slice(0, todayIdx + 1);
+
+    // Destroy old charts
+    Object.values(charts).forEach(c => c && c.destroy());
+
+    // ── Daily bar chart ──
+    // Palette
+    const TEAL_A  = 'rgba(20,184,166,0.82)';
+    const TEAL    = '#14b8a6';
+    const AMBER_A = 'rgba(245,158,11,0.78)';
+    const AMBER   = '#f59e0b';
+    const ROSE_A  = 'rgba(244,63,94,0.72)';
+    const ROSE    = '#f43f5e';
+    const FUTURE  = 'rgba(255,255,255,0.0)';
+
+    // Diagonal stripe texture for "excess" bars (logged > standard)
+    // Must be created after the canvas exists in DOM
+    const dailyCtx = document.getElementById('chart-daily').getContext('2d');
+    function makeStripePattern(fillColor, stripeColor) {
+        const sz = 8;
+        const pc = document.createElement('canvas');
+        pc.width = sz; pc.height = sz;
+        const px = pc.getContext('2d');
+        px.fillStyle = fillColor;
+        px.fillRect(0, 0, sz, sz);
+        px.strokeStyle = stripeColor;
+        px.lineWidth = 1.8;
+        for (const offset of [-sz, 0, sz]) {
+            px.beginPath();
+            px.moveTo(0 + offset, sz);
+            px.lineTo(sz + offset, 0);
+            px.stroke();
+        }
+        return dailyCtx.createPattern(pc, 'repeat');
+    }
+    const excessPattern = makeStripePattern('rgba(37,99,235,0.88)', 'rgba(255,255,255,0.32)');
+
+    // Base dataset: logged hours up to the standard limit
+    const baseData    = wds.map((d, i) => i <= todayIdx ? Math.min(d.logged, d.standard) : null);
+    const baseColors  = wds.map((d, i) => {
+        if (i > todayIdx)          return FUTURE;
+        if (d.logged === 0)        return ROSE_A;
+        if (d.logged >= d.standard) return TEAL_A;
+        return AMBER_A;
+    });
+    const baseBorders = wds.map((d, i) => {
+        if (i > todayIdx)          return FUTURE;
+        if (d.logged === 0)        return ROSE;
+        if (d.logged >= d.standard) return TEAL;
+        return AMBER;
+    });
+
+    // Excess dataset: logged hours above the standard (null = no bar)
+    const excessData  = wds.map((d, i) => {
+        if (i > todayIdx) return null;
+        const ex = d.logged - d.standard;
+        return ex > 0 ? ex : null;
+    });
+
+    const maxY   = Math.max(20, ...wds.map(d => Math.max(d.logged, d.standard))) + 2;
+    const stdLine = wds.map(d => d.standard);
+
+    charts.daily = new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+            labels: wds.map(d => d.day_label),
+            datasets: [
+                {
+                    label: 'Đã log (trong chuẩn)',
+                    data: baseData,
+                    backgroundColor: baseColors,
+                    borderColor: baseBorders,
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.85,
+                    stack: 'daily',
+                    order: 1,
+                },
+                {
+                    label: 'Vượt chuẩn',
+                    data: excessData,
+                    backgroundColor: excessPattern,
+                    borderColor: '#2563eb',
+                    borderWidth: 1.5,
+                    borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                    borderSkipped: 'bottom',
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.85,
+                    stack: 'daily',
+                    order: 1,
+                },
+                {
+                    label: 'Mức chuẩn',
+                    data: stdLine,
+                    type: 'line',
+                    borderColor: 'rgba(99,102,241,0.6)',
+                    borderWidth: 1.5,
+                    borderDash: [5, 3],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: false,
+                    tension: 0,
+                    order: 0,
+                    yAxisID: 'y',
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: {
+                    color: C.tick, font: { size: 10 }, boxWidth: 10, padding: 14,
+                    filter: item => item.text !== 'Mức chuẩn'
+                }},
+                tooltip: {
+                    ...tooltipBase,
+                    callbacks: {
+                        label: ctx => {
+                            if (ctx.dataset.label === 'Mức chuẩn')       return `  Chuẩn: ${ctx.raw}h`;
+                            if (ctx.dataset.label === 'Vượt chuẩn')     return ctx.raw > 0 ? `  📘 Vượt: +${fmtH(ctx.raw)}` : null;
+                            if (ctx.raw === null) return null;
+                            return `  Đã log: ${fmtH(ctx.raw)}`;
+                        },
+                        afterBody: items => {
+                            const i = items[0].dataIndex;
+                            if (i > todayIdx) return ['→ Ngày tương lai'];
+                            const d = wds[i];
+                            const diff = d.logged - d.standard;
+                            if (diff > 0)  return [`✅ Tổng: ${fmtH(d.logged)} (↑${fmtH(diff)} chuẩn)`, `  Chuẩn: ${d.standard}h`];
+                            if (diff < 0)  return [`⚠️ Thiếu: ${fmtH(Math.abs(diff))}`, `  Cần: ${d.standard}h | Đã: ${fmtH(d.logged)}`];
+                            return ['✅ Đạt chuẩn'];
+                        }
+                    }
+                }
+            },
+            scales: { ...scalesBase, y: { ...scalesBase.y, min: 0, max: maxY } }
+        }
+    });
+
+    // ── Cumulative line chart ──
+    let cumStd = 0, cumLog = 0;
+    const cumStdData = [], cumLogData = [];
+    pastDays.forEach(d => {
+        cumStd += d.standard; cumLog += d.logged;
+        cumStdData.push(Math.round(cumStd * 100) / 100);
+        cumLogData.push(Math.round(cumLog * 100) / 100);
+    });
+
+    charts.cumul = new Chart(document.getElementById('chart-cumulative').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: pastDays.map(d => d.day_label),
+            datasets: [
+                {
+                    label: 'Cần đạt', data: cumStdData,
+                    borderColor: 'rgba(99,102,241,0.7)', backgroundColor: 'rgba(99,102,241,0.04)',
+                    fill: true, borderDash: [5,3], tension: 0.3, borderWidth: 2,
+                    pointRadius: 3, pointBackgroundColor: C.indigo, pointBorderColor: '#0b0d14', pointBorderWidth: 2,
+                },
+                {
+                    label: 'Đã log', data: cumLogData,
+                    borderColor: C.green, backgroundColor: 'rgba(16,185,129,0.06)',
+                    fill: true, tension: 0.3, borderWidth: 2.5,
+                    pointRadius: 3, pointBackgroundColor: C.green, pointBorderColor: '#0b0d14', pointBorderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: C.tick, font: { size: 10 }, boxWidth: 10 } },
+                tooltip: tooltipBase
+            },
+            scales: scalesBase
+        }
+    });
+
+    // ── Deficit/Surplus chart (per-day, narrow bars, teal/rose palette) ──
+    const deficits = pastDays.map(d => Math.round((d.logged - d.standard) * 100) / 100);
+    const netTotal = Math.round(deficits.reduce((s, v) => s + v, 0) * 100) / 100;
+
+    document.getElementById('net-total-label').innerHTML =
+        `Tổng: <span style="color:${netTotal >= 0 ? '#2dd4bf' : '#fb7185'};font-size:16px;">${netTotal >= 0 ? '+' : ''}${fmtH(netTotal)}</span>`;
+
+    const defMaxAbs = Math.max(8, ...deficits.map(v => Math.abs(v))) + 1;
+
+    const TEAL_DEF  = 'rgba(45,212,191,0.75)';   // teal-400
+    const TEAL_DEF_B = '#2dd4bf';
+    const ROSE_DEF  = 'rgba(251,113,133,0.72)';  // rose-400
+    const ROSE_DEF_B = '#fb7185';
+
+    charts.deficit = new Chart(document.getElementById('chart-deficit').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: pastDays.map(d => d.day_label),
+            datasets: [{
+                label: 'Thiếu/Thừa',
+                data: deficits,
+                backgroundColor: deficits.map(v => v >= 0 ? TEAL_DEF  : ROSE_DEF),
+                borderColor:     deficits.map(v => v >= 0 ? TEAL_DEF_B : ROSE_DEF_B),
+                borderWidth: 1.5,
+                borderRadius: 4,
+                borderSkipped: false,
+                barPercentage: 0.65,
+                categoryPercentage: 0.80,
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tooltipBase,
+                    callbacks: {
+                        title: items => pastDays[items[0].dataIndex].date,
+                        label: ctx => {
+                            const v = ctx.raw;
+                            if (v === 0) return '  Đúng chuẩn ✅';
+                            return v > 0 ? `  Thừa: +${fmtH(v)} ✅` : `  Thiếu: ${fmtH(v)} ⚠️`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ...scalesBase.x, grid: { color: 'rgba(255,255,255,0.03)' } },
+                y: {
+                    ...scalesBase.y,
+                    min: -defMaxAbs,
+                    max: defMaxAbs,
+                    ticks: {
+                        ...scalesBase.y.ticks,
+                        stepSize: 2,
+                        callback: v => v >= 0 ? `+${v}h` : `${v}h`
+                    },
+                    // Draw zero-line more prominently
+                    grid: { color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.04)' }
+                }
+            }
+        }
+    });
+}
+
+function switchTaskTab(tab) {
+    if (activeTaskTab === tab) return;
+    activeTaskTab = tab;
+    activeProject = 'all';
+    currentPage = 1;
+    
+    document.getElementById('tab-done').classList.toggle('active', tab === 'done');
+    document.getElementById('tab-inprogress').classList.toggle('active', tab === 'inprogress');
+    document.getElementById('tab-todo').classList.toggle('active', tab === 'todo');
+    document.getElementById('tab-missing').classList.toggle('active', tab === 'missing');
+    
+    renderTable();
+}
+
+function switchProject(proj) {
+    activeProject = proj;
+    currentPage = 1;
+    renderTable();
+}
+
+function renderProjectTabs() {
+    if (!currentData) return;
+    
+    // Extract unique projects from all lists
+    const allTasks = [
+        ...(currentData.tasks || []),
+        ...(currentData.in_progress_tasks || []),
+        ...(currentData.todo_tasks || [])
+    ];
+    
+    const projectMap = {};
+    allTasks.forEach(t => {
+        if (t.project) {
+            projectMap[t.project] = t.project_key || t.project;
+        }
+    });
+    
+    const projects = Object.keys(projectMap).sort();
+    const container = document.getElementById('project-tabs');
+    
+    if (projects.length <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    
+    let html = `
+        <button class="project-tab-btn ${activeProject === 'all' ? 'active' : ''}" onclick="switchProject('all')">
+            🌐 Tất cả dự án
+        </button>
+    `;
+    
+    html += projects.map(p => {
+        const isActive = activeProject === p;
+        const key = projectMap[p];
+        return `
+            <button class="project-tab-btn ${isActive ? 'active' : ''}" onclick="switchProject('${escHtml(p)}')">
+                📁 ${escHtml(p)} (${key})
+            </button>
+        `;
+    }).join('');
+    
+    container.innerHTML = html;
+}
+
+function changePage(p) {
+    currentPage = p;
+    renderTable();
+}
+
+function renderPagination(totalTasks) {
+    const container = document.getElementById('pagination-controls');
+    const totalPages = Math.ceil(totalTasks / PAGE_SIZE);
+    
+    if (totalPages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    
+    let html = `
+        <button class="page-btn" onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''}>⏮</button>
+        <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>◀</button>
+    `;
+    
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    
+    if (endPage - startPage + 1 < maxPagesToShow) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+    
+    for (let p = startPage; p <= endPage; p++) {
+        html += `
+            <button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="changePage(${p})">
+                ${p}
+            </button>
+        `;
+    }
+    
+    html += `
+        <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>▶</button>
+        <button class="page-btn" onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>⏭</button>
+        <span class="page-info">Trang ${currentPage}/${totalPages} (Tổng ${totalTasks} tasks)</span>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function renderTable() {
+    if (!currentData) return;
+    
+    renderProjectTabs();
+    
+    const doneTasks = currentData.tasks || [];
+    const inProgressTasks = (currentData.in_progress_tasks || []).filter(t => {
+        if (!t.created) return false;  // Old cached data without 'created': exclude to avoid month leaks
+        return t.created.substring(0, 7) === currentMonth;
+    });
+    const todoTasks = (currentData.todo_tasks || []).filter(t => {
+        const isSubtask = t.issue_type.toLowerCase().includes('sub');
+        const isIdea = (t.status || '').toUpperCase() === 'IDEA';
+        if (!(isSubtask && !isIdea)) return false;
+        if (!t.created) return false;  // Old cached data without 'created': exclude to avoid month leaks
+        return t.created.substring(0, 7) === currentMonth;
+    });
+    const missingTasks = doneTasks.filter(t => t.missing_fields && t.missing_fields.length > 0);
+    
+    // Update tab badges
+    document.getElementById('done-badge').textContent = doneTasks.length;
+    document.getElementById('inprogress-badge').textContent = inProgressTasks.length;
+    document.getElementById('todo-badge').textContent = todoTasks.length;
+    document.getElementById('missing-badge').textContent = missingTasks.length;
+    
+    // Select active task list
+    let activeTasks = [];
+    if (activeTaskTab === 'done') {
+        activeTasks = doneTasks;
+    } else if (activeTaskTab === 'inprogress') {
+        activeTasks = inProgressTasks;
+    } else if (activeTaskTab === 'todo') {
+        activeTasks = todoTasks;
+    } else {
+        activeTasks = missingTasks;
+    }
+    
+    // Apply project filter
+    if (activeProject !== 'all') {
+        activeTasks = activeTasks.filter(t => t.project === activeProject);
+    }
+    
+    const totalTasks = activeTasks.length;
+    const totalPages = Math.ceil(totalTasks / PAGE_SIZE);
+    if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const pageTasks = activeTasks.slice(startIndex, startIndex + PAGE_SIZE);
+    
+    document.getElementById('task-count').textContent = `${totalTasks} tasks`;
+    
+    // Render dynamic table header
+    const theadTr = document.getElementById('task-thead-tr');
+    if (activeTaskTab === 'done') {
+        theadTr.innerHTML = `
+            <th>#</th>
+            <th>Key</th>
+            <th>Summary</th>
+            <th>Project</th>
+            <th>Loại</th>
+            <th>Ngày Done</th>
+            <th>Time Spent</th>
+            <th style="width: 100px; text-align: center;">Thao tác</th>
+        `;
+    } else if (activeTaskTab === 'inprogress' || activeTaskTab === 'todo') {
+        theadTr.innerHTML = `
+            <th>#</th>
+            <th>Key</th>
+            <th>Summary</th>
+            <th>Project</th>
+            <th>Loại</th>
+            <th>Trạng thái</th>
+            <th>Time Spent</th>
+            <th style="width: 160px; text-align: center;">Thao tác</th>
+        `;
+    } else {
+        theadTr.innerHTML = `
+            <th>#</th>
+            <th>Key</th>
+            <th>Summary</th>
+            <th>Project</th>
+            <th>Loại</th>
+            <th>Thông tin thiếu (Bắt buộc khi Done)</th>
+            <th>Time Spent</th>
+            <th style="width: 100px; text-align: center;">Thao tác</th>
+        `;
+    }
+    
+    const typeIcon = (t) => {
+        if (!t) return '🔧';
+        if (t.toLowerCase().includes('bug'))  return '🐛';
+        if (t.toLowerCase().includes('epic')) return '⚡';
+        if (t.toLowerCase().includes('story')) return '📖';
+        return '🔧';
+    };
+    
+    const statusBadgeClass = (status) => {
+        const s = (status || '').toLowerCase();
+        if (s.includes('done') || s.includes('complete') || s.includes('resolved')) return 'badge-done';
+        if (s.includes('in progress') || s.includes('inprogress') || s.includes('running')) return 'badge-inprogress';
+        if (s.includes('qa') || s.includes('testing') || s.includes('review')) return 'badge-inqa';
+        if (s.includes('cancelled') || s.includes('cancel') || s.includes('closed') || s.includes('rejected')) return 'badge-cancelled';
+        return 'badge-todo';
+    };
+    
+    if (activeTasks.length === 0) {
+        const colSpan = 8;
+        document.getElementById('task-tbody').innerHTML =
+            `<tr><td colspan="${colSpan}" style="text-align:center;color:var(--muted);padding:40px;">Không có task nào trong danh sách</td></tr>`;
+    } else {
+        document.getElementById('task-tbody').innerHTML = pageTasks.map((t, i) => {
+            let column6 = '';
+            let column8 = '';
+            
+            if (activeTaskTab === 'done') {
+                column6 = `<td style="font-size:12px;white-space:nowrap;">${fmtDate(t.resolved_date)}</td>`;
+                column8 = `
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-ghost" onclick="openEditFieldsModal('${t.key}')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px; border-color: rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color: var(--text);">✏️ Sửa</button>
+                    </td>
+                `;
+            } else if (activeTaskTab === 'inprogress' || activeTaskTab === 'todo') {
+                const sClass = statusBadgeClass(t.status);
+                column6 = `<td><span class="badge ${sClass}">${escHtml(t.status)}</span></td>`;
+                column8 = `
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-ghost" onclick="openWorklogModal('${t.key}')" style="padding: 4px 8px; font-size: 11px; margin-right: 4px; border-radius: 6px; border-color: rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color: var(--text);">⏱ Log</button>
+                        <button class="btn btn-ghost" onclick="openStatusModal('${t.key}')" style="padding: 4px 8px; font-size: 11px; margin-right: 4px; border-radius: 6px; border-color: rgba(139,92,246,0.2); background: rgba(139,92,246,0.05); color: var(--purple-l);">🔄 Status</button>
+                        <button class="btn btn-ghost" onclick="openEditFieldsModal('${t.key}')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px; border-color: rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color: var(--text);">✏️ Sửa</button>
+                    </td>
+                `;
+            } else {
+                // missing tab
+                const badges = t.missing_fields.map(f => `
+                    <span class="badge" style="background: rgba(244,63,94,0.08); color: #fb7185; border: 1px solid rgba(244,63,94,0.15); margin-right: 4px; margin-bottom: 2px;">${escHtml(f)}</span>
+                `).join('');
+                column6 = `<td><div style="display:flex; flex-wrap:wrap; max-width: 320px;">${badges}</div></td>`;
+                column8 = `
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-ghost" onclick="openEditFieldsModal('${t.key}')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px; border-color: rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color: var(--text);">✏️ Sửa</button>
+                    </td>
+                `;
+            }
+                
+            return `
+                <tr>
+                    <td style="color:var(--muted);font-size:11px;">${startIndex + i + 1}</td>
+                    <td><a href="${t.url}" target="_blank" class="key-link">${t.key}</a></td>
+                    <td class="task-summary">${escHtml(t.summary)}</td>
+                    <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${escHtml(t.project)}</td>
+                    <td><span class="badge badge-subtask">${typeIcon(t.issue_type)} ${escHtml(t.issue_type)}</span></td>
+                    ${column6}
+                    <td class="${t.has_worklog ? 'time-ok' : 'time-missing'}">
+                        ${t.has_worklog ? `✅ ${t.time_spent_display}` : '⚠️ Chưa log'}
+                    </td>
+                    ${column8}
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    const totalLogged = activeTasks.filter(t => t.has_worklog).reduce((s, t) => s + t.time_spent_hours, 0);
+    const noLog = activeTasks.filter(t => !t.has_worklog).length;
+    document.getElementById('total-hours-display').textContent = fmtH(Math.round(totalLogged * 100) / 100);
+    
+    if (activeTaskTab === 'done') {
+        document.getElementById('total-hours-sub').textContent = noLog > 0
+            ? `(${activeTasks.length} tasks · ${noLog} chưa có worklog)`
+            : `(${activeTasks.length} tasks · tất cả đã log)`;
+    } else if (activeTaskTab === 'inprogress') {
+        document.getElementById('total-hours-sub').textContent = noLog > 0
+            ? `(${activeTasks.length} tasks đang làm · ${noLog} chưa log giờ)`
+            : `(${activeTasks.length} tasks đang làm · tất cả đã log)`;
+    } else if (activeTaskTab === 'todo') {
+        document.getElementById('total-hours-sub').textContent = noLog > 0
+            ? `(${activeTasks.length} tasks To-do · ${noLog} chưa log giờ)`
+            : `(${activeTasks.length} tasks To-do · tất cả đã log)`;
+    } else {
+        document.getElementById('total-hours-sub').textContent = `(${activeTasks.length} tasks Done thiếu trường bắt buộc)`;
+    }
+    
+    renderPagination(totalTasks);
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openWorklogModal(key) {
+    document.getElementById('worklog-task-key').value = key;
+    document.getElementById('worklog-modal-sub').textContent = `Log work cho task ${key}`;
+    document.getElementById('worklog-time').value = '';
+    document.getElementById('worklog-comment').value = '';
+    document.getElementById('worklog-modal').classList.add('active');
+}
+
+function closeWorklogModal() {
+    document.getElementById('worklog-modal').classList.remove('active');
+}
+
+async function submitWorklog() {
+    const key = document.getElementById('worklog-task-key').value;
+    const timeSpent = document.getElementById('worklog-time').value.trim();
+    const comment = document.getElementById('worklog-comment').value.trim();
+    
+    if (!timeSpent) {
+        showToast('Vui lòng nhập thời gian làm việc (ví dụ: 1h 30m, 45m)', 'error');
+        return;
+    }
+    
+    closeWorklogModal();
+    setLoading(true, `Đang log work cho task ${key}...`);
+    try {
+        const res = await fetch(`/api/issue/${key}/worklog`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeSpent, comment })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Lỗi log work');
+        
+        showToast(`✅ Ghi nhận ${timeSpent} thành công cho task ${key}!`, 'success');
+        // Refresh dashboard data
+        await refresh();
+    } catch (e) {
+        showToast(`❌ Lỗi: ${e.message}`, 'error', 6000);
+    } finally {
+        setLoading(false);
+    }
+}
+
+function openStatusModal(key) {
+    document.getElementById('status-task-key').value = key;
+    document.getElementById('status-modal-sub').textContent = `Chuyển trạng thái cho task ${key}`;
+    
+    const select = document.getElementById('status-select');
+    select.innerHTML = '<option value="">⏳ Đang tải danh trạng thái...</option>';
+    
+    const submitBtn = document.getElementById('status-submit-btn');
+    submitBtn.disabled = true;
+    
+    document.getElementById('status-modal').classList.add('active');
+    
+    // Fetch allowed transitions
+    fetch(`/api/issue/${key}/transitions?t=${Date.now()}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            const ts = data.transitions || [];
+            if (ts.length === 0) {
+                select.innerHTML = '<option value="">Không có trạng thái chuyển đổi khả dụng</option>';
+                return;
+            }
+            select.innerHTML = ts.map(t => `<option value="${t.id}">${t.name} (→ ${t.toStatus})</option>`).join('');
+            submitBtn.disabled = false;
+        })
+        .catch(e => {
+            select.innerHTML = '<option value="">❌ Không thể tải trạng thái</option>';
+            showToast(`Lỗi tải trạng thái: ${e.message}`, 'error');
+        });
+}
+
+function closeStatusModal() {
+    document.getElementById('status-modal').classList.remove('active');
+}
+
+async function submitStatusTransition() {
+    const key = document.getElementById('status-task-key').value;
+    const select = document.getElementById('status-select');
+    const transitionId = select.value;
+    
+    if (!transitionId) {
+        showToast('Vui lòng chọn trạng thái mới.', 'error');
+        return;
+    }
+    
+    closeStatusModal();
+    setLoading(true, `Đang chuyển trạng thái cho task ${key}...`);
+    try {
+        const res = await fetch(`/api/issue/${key}/transition`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transitionId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Lỗi chuyển trạng thái');
+        
+        showToast(`✅ Chuyển trạng thái task ${key} thành công!`, 'success');
+        // Refresh dashboard data
+        await refresh();
+    } catch (e) {
+        showToast(`❌ Lỗi: ${e.message}`, 'error', 6000);
+    } finally {
+        setLoading(false);
+    }
+}
+
+document.getElementById('worklog-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeWorklogModal();
+});
+document.getElementById('status-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeStatusModal();
+});
+document.getElementById('edit-fields-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditFieldsModal();
+});
+
+// ── Edit Fields Modal Logic ──
+
+function openEditFieldsModal(key) {
+    let t = null;
+    if (currentData) {
+        t = (currentData.tasks || []).find(x => x.key === key) ||
+            (currentData.in_progress_tasks || []).find(x => x.key === key) ||
+            (currentData.todo_tasks || []).find(x => x.key === key);
+    }
+    
+    if (!t) {
+        showToast('Không tìm thấy thông tin task.', 'error');
+        return;
+    }
+
+    document.getElementById('edit-fields-task-key').value = key;
+    document.getElementById('edit-fields-modal-sub').textContent = `Cập nhật thông tin cho task ${key}`;
+    
+    const isSubtask = t.issue_type.toLowerCase().includes('sub');
+    document.getElementById('edit-parent-container').style.display = isSubtask ? 'block' : 'none';
+    document.getElementById('edit-parent-key').value = t.parent_key || '';
+    
+    document.getElementById('edit-original-estimate').value = secondsToJiraEstimate(t.original_estimate);
+    document.getElementById('edit-story-points').value = t.story_points != null ? t.story_points : '';
+    document.getElementById('edit-labels').value = (t.labels || []).join(', ');
+    document.getElementById('edit-start-date').value = t.start_date || '';
+    document.getElementById('edit-due-date').value = t.duedate || '';
+    document.getElementById('edit-actual-start').value = formatDateTimeLocal(t.actual_start);
+    document.getElementById('edit-actual-end').value = formatDateTimeLocal(t.actual_end);
+    
+    document.getElementById('edit-fields-modal').classList.add('active');
+}
+
+function closeEditFieldsModal() {
+    document.getElementById('edit-fields-modal').classList.remove('active');
+}
+
+async function submitEditFields() {
+    const key = document.getElementById('edit-fields-task-key').value;
+    
+    const parentKey = document.getElementById('edit-parent-key').value.trim();
+    const originalEstimate = document.getElementById('edit-original-estimate').value.trim();
+    const storyPoints = document.getElementById('edit-story-points').value.trim();
+    const labels = document.getElementById('edit-labels').value.trim();
+    const startDate = document.getElementById('edit-start-date').value;
+    const duedate = document.getElementById('edit-due-date').value;
+    const actualStartVal = document.getElementById('edit-actual-start').value;
+    const actualEndVal = document.getElementById('edit-actual-end').value;
+    
+    const actualStart = toJiraIsoDateTime(actualStartVal);
+    const actualEnd = toJiraIsoDateTime(actualEndVal);
+    
+    closeEditFieldsModal();
+    setLoading(true, `Đang cập nhật thông tin cho task ${key}...`);
+    try {
+        const res = await fetch(`/api/issue/${key}/update-fields`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                originalEstimate,
+                labels,
+                parentKey,
+                duedate,
+                startDate,
+                storyPoints,
+                actualStart,
+                actualEnd
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Lỗi cập nhật thông tin');
+        
+        showToast(`✅ Cập nhật thông tin task ${key} thành công!`, 'success');
+        await refresh();
+    } catch (e) {
+        showToast(`❌ Lỗi: ${e.message}`, 'error', 6000);
+    } finally {
+        setLoading(false);
+    }
+}
+
+function secondsToJiraEstimate(sec) {
+    if (!sec) return '';
+    const h = Math.floor(sec / 3600);
+    const m = Math.round((sec % 3600) / 60);
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    if (m > 0) return `${m}m`;
+    return '';
+}
+
+function formatDateTimeLocal(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${h}:${min}`;
+}
+
+function toJiraIsoDateTime(localVal) {
+    if (!localVal) return null;
+    return `${localVal}:00.000+0700`;
+}
+
+// ── Bootstrap ──────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

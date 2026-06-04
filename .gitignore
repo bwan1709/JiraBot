@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment variables (chứa API keys - KHÔNG commit)
+.env
+.env.local
+.env.*.local
+
+# Cached Jira data (generated files)
+reports/data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

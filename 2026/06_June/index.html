@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⏱ Time Report — Tháng 6/2026 | Quân Hoàng</title>
+    <meta name="description" content="Báo cáo thời gian làm việc tháng 6/2026 - Quân Hoàng">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0b0d14;
+            --surface: rgba(255,255,255,0.035);
+            --surface-hover: rgba(255,255,255,0.06);
+            --border: rgba(255,255,255,0.08);
+            --border-strong: rgba(255,255,255,0.14);
+            --text: #e2e8f0;
+            --text-muted: #7c8db5;
+            --purple: #8b5cf6;
+            --purple-dim: rgba(139,92,246,0.15);
+            --indigo: #6366f1;
+            --green: #10b981;
+            --green-dim: rgba(16,185,129,0.12);
+            --red: #f43f5e;
+            --red-dim: rgba(244,63,94,0.12);
+            --yellow: #f59e0b;
+            --yellow-dim: rgba(245,158,11,0.12);
+            --blue: #3b82f6;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 28px 20px;
+            line-height: 1.6;
+        }
+
+        /* Ambient background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 10% 0%, rgba(139,92,246,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 90% 100%, rgba(99,102,241,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(16,185,129,0.02) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; position: relative; z-index: 1; }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 36px;
+            gap: 16px;
+        }
+
+        .header-badge-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .header-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--purple-dim);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 100px;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #a78bfa;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #c4b5fd 0%, #818cf8 50%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+            margin-bottom: 8px;
+        }
+
+        .header-meta {
+            color: var(--text-muted);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-meta span { display: flex; align-items: center; gap: 5px; }
+
+        .header-right {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 14px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .live-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+        /* ── Stats Grid ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px 18px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .stat-card.standard::before { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
+        .stat-card.logged::before   { background: linear-gradient(90deg, #10b981, #059669); }
+        .stat-card.deficit::before  { background: linear-gradient(90deg, #f43f5e, #e11d48); }
+        .stat-card.surplus::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+        .stat-card.progress::before { background: linear-gradient(90deg, #3b82f6, #6366f1); }
+        .stat-card.tasks::before    { background: linear-gradient(90deg, #f59e0b, #f97316); }
+
+        .stat-card:hover { background: var(--surface-hover); transform: translateY(-3px); }
+
+        .stat-icon { font-size: 20px; margin-bottom: 10px; }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .stat-card.standard .stat-value { color: #a78bfa; }
+        .stat-card.logged   .stat-value { color: #34d399; }
+        .stat-card.deficit  .stat-value { color: #fb7185; }
+        .stat-card.surplus  .stat-value { color: #34d399; }
+        .stat-card.progress .stat-value { color: #60a5fa; }
+        .stat-card.tasks    .stat-value { color: #fbbf24; }
+
+        /* ── Progress Section ── */
+        .progress-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-title { font-size: 14px; font-weight: 700; }
+
+        .progress-legend {
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .progress-bar-wrapper { margin-bottom: 12px; }
+
+        .progress-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+
+        .progress-row-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            width: 130px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 10px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bar-logged { background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa); box-shadow: 0 0 12px rgba(139,92,246,0.4); }
+        .bar-required { background: rgba(244,63,94,0.5); }
+
+        .bar-pct { font-size: 11px; color: var(--text-muted); width: 38px; text-align: right; flex-shrink: 0; font-weight: 600; }
+
+        /* ── Charts Grid ── */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .chart-title { font-size: 14px; font-weight: 700; }
+        .chart-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+        .chart-legend {
+            display: flex;
+            gap: 14px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ── Deficit Chart ── */
+        .deficit-chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* ── Alert Boxes ── */
+        .alerts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .alert-box {
+            border-radius: 16px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .alert-box.warn {
+            background: var(--red-dim);
+            border: 1px solid rgba(244,63,94,0.2);
+        }
+
+        .alert-box.info {
+            background: var(--yellow-dim);
+            border: 1px solid rgba(245,158,11,0.2);
+        }
+
+        .alert-icon { font-size: 22px; flex-shrink: 0; }
+
+        .alert-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+
+        .alert-desc { font-size: 12px; color: var(--text-muted); }
+
+        /* ── Table ── */
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .table-title { font-size: 14px; font-weight: 700; }
+
+        .table-count {
+            background: var(--purple-dim);
+            border: 1px solid rgba(139,92,246,0.25);
+            border-radius: 100px;
+            padding: 2px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #a78bfa;
+        }
+
+        .table-wrapper { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+
+        th {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 14px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.035);
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: rgba(255,255,255,0.025); }
+
+        .task-key {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: #a78bfa;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .task-key:hover { text-decoration: underline; }
+
+        .task-summary { max-width: 360px; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 9px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-done      { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+        .badge-subtask   { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
+        .badge-no-log    { background: var(--red-dim); color: #fb7185; border: 1px solid rgba(244,63,94,0.2); }
+        .badge-surplus   { background: rgba(16,185,129,0.1); color: #34d399; }
+        .badge-partial   { background: rgba(245,158,11,0.1); color: #fbbf24; }
+        .badge-missing   { background: var(--red-dim); color: #fb7185; }
+
+        .time-cell {
+            font-weight: 700;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .time-logged  { color: #34d399; }
+        .time-missing { color: #fb7185; }
+
+        /* ── Divider ── */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 24px 0;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-rule {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .footer-rule span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px 10px;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .alerts-row { grid-template-columns: 1fr; }
+            h1 { font-size: 26px; }
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .header { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ── HEADER ── -->
+    <div class="header">
+        <div>
+            <div class="header-badge-row">
+                <span class="header-pill">📅 Tháng 6 · 2026</span>
+                <span class="header-pill" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.3);color:#34d399;">✅ 7 Tasks Done</span>
+            </div>
+            <h1>Time Spent Report</h1>
+            <div class="header-meta">
+                <span>👤 Quân Hoàng</span>
+                <span>💼 Back-end Developer</span>
+                <span>📍 Ho Chi Minh City</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                <span>Cập nhật: 03/06/2026 13:22 ICT</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);text-align:right;">
+                Ngày làm việc còn lại: <strong style="color:var(--text)">23 ngày</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── STATS ── -->
+    <div class="stats-grid">
+        <div class="stat-card standard">
+            <div class="stat-icon">📋</div>
+            <div class="stat-label">Giờ Chuẩn Tháng</div>
+            <div class="stat-value">192h</div>
+            <div class="stat-sub">8h × 24 ngày | T7: 4h × 4 ngày</div>
+        </div>
+        <div class="stat-card logged">
+            <div class="stat-icon">✅</div>
+            <div class="stat-label">Đã Log</div>
+            <div class="stat-value">20h</div>
+            <div class="stat-sub">Tính đến ngày 03/06/2026</div>
+        </div>
+        <div class="stat-card deficit">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-label">Thiếu Hiện Tại</div>
+            <div class="stat-value">-4h</div>
+            <div class="stat-sub">Cần đạt: 24h | Đã log: 20h</div>
+        </div>
+        <div class="stat-card progress">
+            <div class="stat-icon">📈</div>
+            <div class="stat-label">Tiến Độ Tháng</div>
+            <div class="stat-value">10.4%</div>
+            <div class="stat-sub">20h / 192h toàn tháng</div>
+        </div>
+        <div class="stat-card tasks">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-label">Tasks Done</div>
+            <div class="stat-value">7</div>
+            <div class="stat-sub">6 có worklog · 1 chưa log</div>
+        </div>
+    </div>
+
+    <!-- ── PROGRESS BARS ── -->
+    <div class="progress-card">
+        <div class="progress-header">
+            <div>
+                <div class="progress-title">📊 Tiến độ tháng 6/2026</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">So sánh giờ đã log vs giờ cần đạt tính đến hôm nay</div>
+            </div>
+            <div class="progress-legend">
+                <span><span class="legend-dot" style="background:#8b5cf6;"></span>Đã log</span>
+                <span><span class="legend-dot" style="background:rgba(244,63,94,0.6);"></span>Yêu cầu đến hôm nay</span>
+                <span><span class="legend-dot" style="background:rgba(255,255,255,0.15);"></span>Mục tiêu tháng</span>
+            </div>
+        </div>
+        <div class="progress-bar-wrapper">
+            <div class="progress-row">
+                <span class="progress-row-label">✅ Đã log (20h)</span>
+                <div class="bar-track">
+                    <div class="bar-fill bar-logged" style="width:10.42%;"></div>
+                </div>
+                <span class="bar-pct">10.4%</span>
+            </div>
+            <div class="progress-row">
+                <span class="progress-row-label">⏳ Yêu cầu đến T4 (24h)</span>
+                <div class="bar-track">
+                    <div class="bar-fill bar-required" style="width:12.5%;"></div>
+                </div>
+                <span class="bar-pct">12.5%</span>
+            </div>
+            <div class="progress-row">
+                <span class="progress-row-label">📋 Mục tiêu tháng (192h)</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:100%;background:rgba(255,255,255,0.06);"></div>
+                </div>
+                <span class="bar-pct">100%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MAIN CHARTS ── -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">📅 Log theo ngày — Tháng 6/2026</div>
+                    <div class="chart-subtitle">Giờ chuẩn (xanh) vs Thực tế đã log (màu theo trạng thái)</div>
+                </div>
+                <div class="chart-legend">
+                    <span><span class="legend-dot" style="background:#10b981;"></span>Đạt/Thừa</span>
+                    <span><span class="legend-dot" style="background:#f59e0b;"></span>Thiếu 1 phần</span>
+                    <span><span class="legend-dot" style="background:#f43f5e;"></span>0h / Chưa log</span>
+                </div>
+            </div>
+            <canvas id="dailyChart" height="110"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">📈 Lũy kế tháng</div>
+                    <div class="chart-subtitle">Tích lũy giờ đã log vs cần đạt</div>
+                </div>
+            </div>
+            <canvas id="cumulativeChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- ── DEFICIT/SURPLUS CHART ── -->
+    <div class="deficit-chart-card">
+        <div class="chart-header">
+            <div>
+                <div class="chart-title">📊 Thiếu / Thừa theo ngày</div>
+                <div class="chart-subtitle">Dương = thừa giờ | Âm = thiếu giờ (các ngày đã qua)</div>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);">
+                Tổng hiện tại: <strong style="color:#fb7185;">-4h</strong>
+            </div>
+        </div>
+        <canvas id="deficitChart" height="65"></canvas>
+    </div>
+
+    <!-- ── ALERTS ── -->
+    <div class="alerts-row">
+        <div class="alert-box warn">
+            <div class="alert-icon">🔴</div>
+            <div>
+                <div class="alert-title" style="color:#fb7185;">Thiếu log giờ — Cần bổ sung</div>
+                <div class="alert-desc">
+                    <strong style="color:var(--text)">01/06 (Thứ 2):</strong> Thiếu 8h worklog — bạn đã làm việc nhưng chưa log time.<br>
+                    <strong style="color:var(--text)">03/06 (Hôm nay):</strong> Mới log 4h, cần thêm 4h để đạt chuẩn ngày.<br>
+                    <strong style="color:var(--text)">DMSV2-52:</strong> Done nhưng chưa có worklog nào.
+                </div>
+            </div>
+        </div>
+        <div class="alert-box info">
+            <div class="alert-icon">🟡</div>
+            <div>
+                <div class="alert-title" style="color:#fbbf24;">Thừa giờ — 02/06</div>
+                <div class="alert-desc">
+                    Ngày <strong style="color:var(--text)">02/06 (Thứ 3)</strong> bạn đã log <strong style="color:#34d399;">16h</strong> — thừa 8h so với chuẩn.<br>
+                    Năng suất rất cao! 🚀 Tuy nhiên cần chú ý phân bổ đều hơn để tránh burnout.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── TASK TABLE ── -->
+    <div class="table-card">
+        <div class="table-header">
+            <div class="table-title">📋 Danh sách Tasks Done — Tháng 6/2026</div>
+            <span class="table-count">7 tasks</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Key</th>
+                        <th>Summary</th>
+                        <th>Project</th>
+                        <th>Loại</th>
+                        <th>Ngày Done</th>
+                        <th>Ngày Log</th>
+                        <th>Time Spent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="color:var(--text-muted);font-size:11px;">1</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/EXDMS-2635" target="_blank" class="task-key">EXDMS-2635</a></td>
+                        <td class="task-summary">[DMS][DEV][BE] Phân giải Người xử lý theo Hierarchy</td>
+                        <td style="font-size:12px;color:var(--text-muted);">Extended DMS</td>
+                        <td><span class="badge badge-subtask">Subtask</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">03/06/2026</td>
+                        <td style="font-size:12px;white-space:nowrap;">03/06/2026</td>
+                        <td class="time-cell time-logged">✅ 2h</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);font-size:11px;">2</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/EXDMS-2655" target="_blank" class="task-key">EXDMS-2655</a></td>
+                        <td class="task-summary">[DMS][GO][BE] Phân quyền org cho admin duyệt đơn</td>
+                        <td style="font-size:12px;color:var(--text-muted);">Extended DMS</td>
+                        <td><span class="badge badge-subtask">Subtask</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">03/06/2026</td>
+                        <td style="font-size:12px;white-space:nowrap;">03/06/2026</td>
+                        <td class="time-cell time-logged">✅ 2h</td>
+                    </tr>
+                    <tr style="background:rgba(244,63,94,0.04);">
+                        <td style="color:var(--text-muted);font-size:11px;">3</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/DMSV2-52" target="_blank" class="task-key">DMSV2-52</a></td>
+                        <td class="task-summary">[LYT-ERP] Cập nhật Swagger / API doc endpoint Outbound</td>
+                        <td style="font-size:12px;color:var(--text-muted);">DMS Platform</td>
+                        <td><span class="badge badge-subtask">Sub-task</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td style="font-size:12px;color:#fb7185;">—</td>
+                        <td class="time-cell time-missing">⚠️ Chưa log</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);font-size:11px;">4</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/EXDMS-2636" target="_blank" class="task-key">EXDMS-2636</a></td>
+                        <td class="task-summary">[DMS][DEV][FE] Sinh trạng thái đích danh trên báo cáo</td>
+                        <td style="font-size:12px;color:var(--text-muted);">Extended DMS</td>
+                        <td><span class="badge badge-subtask">Subtask</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td class="time-cell time-logged">✅ 2h</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);font-size:11px;">5</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/EXDMS-2632" target="_blank" class="task-key">EXDMS-2632</a></td>
+                        <td class="task-summary">[DMS][DEV][BE] Bổ sung các trường người đại diện vào bảng sub_inventories</td>
+                        <td style="font-size:12px;color:var(--text-muted);">Extended DMS</td>
+                        <td><span class="badge badge-subtask">Subtask</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td class="time-cell time-logged">✅ 4h</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);font-size:11px;">6</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/EXDMS-2634" target="_blank" class="task-key">EXDMS-2634</a></td>
+                        <td class="task-summary">[DMS][DEV][BE] Cập nhật API GET/PUT danh mục Kho Sub</td>
+                        <td style="font-size:12px;color:var(--text-muted);">Extended DMS</td>
+                        <td><span class="badge badge-subtask">Subtask</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td class="time-cell time-logged">✅ 2h</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);font-size:11px;">7</td>
+                        <td><a href="https://pvqpm.atlassian.net/browse/EXDMS-2626" target="_blank" class="task-key">EXDMS-2626</a></td>
+                        <td class="task-summary">[DMS][GO][BE] Thiết kế DB, xử lý API đồng bộ &amp; logic Xóa tuyến trạng thái KH</td>
+                        <td style="font-size:12px;color:var(--text-muted);">Extended DMS</td>
+                        <td><span class="badge badge-subtask">Subtask</span></td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td style="font-size:12px;white-space:nowrap;">02/06/2026</td>
+                        <td class="time-cell time-logged">✅ 8h</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary row -->
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <span style="font-size:12px;color:var(--text-muted);">Tổng giờ có worklog:</span>
+            <span style="font-size:20px;font-weight:900;color:#34d399;">20h</span>
+            <span style="font-size:12px;color:var(--text-muted);">/ 7 tasks (1 chưa log)</span>
+        </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <div class="footer">
+        <div class="footer-rule">
+            <span>📅 T2–T6: 8h/ngày</span>
+            <span>☀️ T7: 4h/ngày (sáng)</span>
+            <span>💤 CN: Nghỉ</span>
+            <span>📊 Tổng tháng: 192h</span>
+            <span>📆 24 ngày làm việc</span>
+        </div>
+        <div style="margin-top:8px;">
+            Cập nhật lần cuối: <strong>03/06/2026 13:22 ICT</strong> · Quân Hoàng · hoangbinhquan179@gmail.com
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const MONTH_DATA = {
+    month: 'June', year: 2026, standardTotal: 192,
+    lastUpdated: '2026-06-03',
+    workingDays: [
+        { date:'2026-06-01', label:'01\nT2', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-02', label:'02\nT3', standard:8,  logged:16, isSat:false },
+        { date:'2026-06-03', label:'03\nT4', standard:8,  logged:4,  isSat:false, isToday:true },
+        { date:'2026-06-04', label:'04\nT5', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-05', label:'05\nT6', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-06', label:'06\nT7', standard:4,  logged:0,  isSat:true  },
+        { date:'2026-06-08', label:'08\nT2', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-09', label:'09\nT3', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-10', label:'10\nT4', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-11', label:'11\nT5', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-12', label:'12\nT6', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-13', label:'13\nT7', standard:4,  logged:0,  isSat:true  },
+        { date:'2026-06-15', label:'15\nT2', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-16', label:'16\nT3', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-17', label:'17\nT4', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-18', label:'18\nT5', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-19', label:'19\nT6', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-20', label:'20\nT7', standard:4,  logged:0,  isSat:true  },
+        { date:'2026-06-22', label:'22\nT2', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-23', label:'23\nT3', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-24', label:'24\nT4', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-25', label:'25\nT5', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-26', label:'26\nT6', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-27', label:'27\nT7', standard:4,  logged:0,  isSat:true  },
+        { date:'2026-06-29', label:'29\nT2', standard:8,  logged:0,  isSat:false },
+        { date:'2026-06-30', label:'30\nT3', standard:8,  logged:0,  isSat:false },
+    ]
+};
+
+const today = MONTH_DATA.lastUpdated;
+const todayIdx = MONTH_DATA.workingDays.findIndex(d => d.date === today);
+const pastDays = MONTH_DATA.workingDays.slice(0, todayIdx + 1);
+
+// Colors
+const C = {
+    purple:     '#8b5cf6',
+    purpleA:    'rgba(139,92,246,0.25)',
+    green:      '#10b981',
+    greenA:     'rgba(16,185,129,0.75)',
+    red:        '#f43f5e',
+    redA:       'rgba(244,63,94,0.75)',
+    yellow:     '#f59e0b',
+    yellowA:    'rgba(245,158,11,0.75)',
+    indigo:     '#6366f1',
+    indigoA:    'rgba(99,102,241,0.15)',
+    grid:       'rgba(255,255,255,0.05)',
+    tick:       '#7c8db5',
+    tooltip_bg: 'rgba(11,13,20,0.97)',
+    tooltip_bd: 'rgba(255,255,255,0.08)',
+};
+
+const defaultTooltip = {
+    backgroundColor: C.tooltip_bg,
+    borderColor: C.tooltip_bd,
+    borderWidth: 1,
+    titleColor: '#e2e8f0',
+    bodyColor: '#7c8db5',
+    padding: 10,
+    cornerRadius: 10,
+};
+
+const defaultScales = {
+    x: {
+        ticks: { color: C.tick, font: { size: 9, family: 'Inter' }, maxRotation: 0 },
+        grid: { color: C.grid }
+    },
+    y: {
+        ticks: { color: C.tick, font: { size: 10, family: 'Inter' } },
+        grid: { color: C.grid }
+    }
+};
+
+// ── DAILY BAR CHART ──────────────────────────────────
+(function() {
+    const days = MONTH_DATA.workingDays;
+    const loggedColors = days.map((d, i) => {
+        if (i > todayIdx) return 'rgba(255,255,255,0)';
+        if (d.logged === 0) return C.redA;
+        if (d.logged >= d.standard) return C.greenA;
+        return C.yellowA;
+    });
+    const loggedBorders = days.map((d, i) => {
+        if (i > todayIdx) return 'rgba(255,255,255,0)';
+        if (d.logged === 0) return C.red;
+        if (d.logged >= d.standard) return C.green;
+        return C.yellow;
+    });
+
+    new Chart(document.getElementById('dailyChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: days.map(d => d.label),
+            datasets: [
+                {
+                    label: 'Giờ chuẩn',
+                    data: days.map(d => d.standard),
+                    backgroundColor: days.map((d, i) =>
+                        i <= todayIdx ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.06)'
+                    ),
+                    borderColor: days.map((d, i) =>
+                        i <= todayIdx ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.15)'
+                    ),
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    order: 2,
+                },
+                {
+                    label: 'Đã log',
+                    data: days.map((d, i) => i <= todayIdx ? d.logged : null),
+                    backgroundColor: loggedColors,
+                    borderColor: loggedBorders,
+                    borderWidth: 1.5,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    order: 1,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: C.tick, font: { size: 10 }, boxWidth: 10, padding: 16 } },
+                tooltip: {
+                    ...defaultTooltip,
+                    callbacks: {
+                        afterBody: (items) => {
+                            const d = days[items[0].dataIndex];
+                            const diff = d.logged - d.standard;
+                            if (items[0].dataIndex > todayIdx) return ['→ Ngày tương lai'];
+                            if (diff > 0) return [`✅ Thừa: +${diff}h`];
+                            if (diff < 0) return [`⚠️ Thiếu: ${diff}h`];
+                            return ['✅ Đúng chuẩn'];
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...defaultScales,
+                y: { ...defaultScales.y, max: 20, min: 0 }
+            }
+        }
+    });
+})();
+
+// ── CUMULATIVE CHART ─────────────────────────────────
+(function() {
+    let cumStd = 0, cumLog = 0;
+    const cumStdArr = [], cumLogArr = [];
+    pastDays.forEach(d => {
+        cumStd += d.standard;
+        cumLog += d.logged;
+        cumStdArr.push(cumStd);
+        cumLogArr.push(cumLog);
+    });
+
+    new Chart(document.getElementById('cumulativeChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: pastDays.map(d => d.label),
+            datasets: [
+                {
+                    label: 'Cần đạt',
+                    data: cumStdArr,
+                    borderColor: 'rgba(99,102,241,0.7)',
+                    backgroundColor: 'rgba(99,102,241,0.04)',
+                    borderDash: [6, 3],
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#0b0d14',
+                    pointBorderWidth: 2,
+                },
+                {
+                    label: 'Đã log',
+                    data: cumLogArr,
+                    borderColor: C.green,
+                    backgroundColor: 'rgba(16,185,129,0.06)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: C.green,
+                    pointBorderColor: '#0b0d14',
+                    pointBorderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: C.tick, font: { size: 10 }, boxWidth: 10 } },
+                tooltip: { ...defaultTooltip }
+            },
+            scales: defaultScales
+        }
+    });
+})();
+
+// ── DEFICIT / SURPLUS CHART ──────────────────────────
+(function() {
+    const deficits = pastDays.map(d => d.logged - d.standard);
+    const colors = deficits.map(v => v >= 0 ? C.greenA : C.redA);
+    const borders = deficits.map(v => v >= 0 ? C.green : C.red);
+
+    new Chart(document.getElementById('deficitChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: pastDays.map(d => d.label),
+            datasets: [{
+                label: 'Thiếu / Thừa (h)',
+                data: deficits,
+                backgroundColor: colors,
+                borderColor: borders,
+                borderWidth: 1.5,
+                borderRadius: 5,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...defaultTooltip,
+                    callbacks: {
+                        label: (ctx) => {
+                            const v = ctx.raw;
+                            return v >= 0 ? `  Thừa: +${v}h` : `  Thiếu: ${v}h`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...defaultScales,
+                y: {
+                    ...defaultScales.y,
+                    grid: { color: C.grid },
+                    ticks: {
+                        color: C.tick,
+                        font: { size: 10 },
+                        callback: v => v >= 0 ? `+${v}h` : `${v}h`
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+</body>
+</html>
