@@ -20,7 +20,7 @@ docker compose up -d
 docker compose logs -f jirabot
 ```
 
-Truy cập: **http://localhost:3000**
+Truy cập: **http://localhost:3344**
 
 ---
 
