@@ -1587,6 +1587,24 @@
             return `${d}/${m}/${y}`;
         }
 
+        function getDoneDateDisplay(t) {
+            const formatISO = (isoStr) => {
+                if (!isoStr) return '';
+                const datePart = isoStr.substring(0, 10);
+                const [y, m, d] = datePart.split('-');
+                return `${d}/${m}/${y}`;
+            };
+            if (t.actual_start && t.actual_end) {
+                const sStr = formatISO(t.actual_start);
+                const eStr = formatISO(t.actual_end);
+                return sStr === eStr ? eStr : `${sStr} - ${eStr}`;
+            }
+            if (t.actual_end) {
+                return formatISO(t.actual_end);
+            }
+            return fmtDate(t.resolved_date);
+        }
+
         function showToast(msg, type = 'info', duration = 3500) {
             const t = document.getElementById('toast');
             t.textContent = msg;
@@ -2808,7 +2826,7 @@
                     let column8 = '';
 
                     if (activeTaskTab === 'done') {
-                        column6 = `<td style="font-size:12px;white-space:nowrap;">${fmtDate(t.resolved_date)}</td>`;
+                        column6 = `<td style="font-size:12px;white-space:nowrap;">${getDoneDateDisplay(t)}</td>`;
                         column8 = `
                     <td style="text-align: center; white-space: nowrap;">
                         <button class="btn btn-ghost" onclick="openEditFieldsModal('${t.key}')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px; border-color: rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color: var(--text);">✏️ Sửa</button>
