@@ -835,6 +835,52 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const dailySecMap = {};
         wdList.forEach(d => { dailySecMap[d.date] = 0; });
 
+        const workingDaysSet = new Set(wdList.map(d => d.date));
+        const getIssueSecondsForMonth = (issue) => {
+            const actualEnd = issue.fields.customfield_10009 || issue.fields.resolutiondate || null;
+            const wls = issue.fields.worklog?.worklogs || [];
+            let totalSec = 0;
+            wls.forEach(wl => {
+                if (wl.author.accountId !== req.user.account_id) return;
+                
+                let targetDateStr;
+                if (actualEnd) {
+                    const wlDate = new Date(wl.started);
+                    const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
+                    
+                    const aeDate = new Date(actualEnd);
+                    const aeMonthStr = `${aeDate.getFullYear()}-${pad(aeDate.getMonth() + 1)}`;
+                    const wlMonthStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}`;
+                    
+                    if (wlMonthStr === aeMonthStr) {
+                        targetDateStr = logDate;
+                    } else {
+                        let targetDate = new Date(actualEnd);
+                        if (targetDate.getDay() === 0) {
+                            const prevDay = new Date(targetDate);
+                            prevDay.setDate(targetDate.getDate() - 1);
+                            if (prevDay.getMonth() === targetDate.getMonth()) {
+                                targetDate = prevDay;
+                            } else {
+                                const nextDay = new Date(targetDate);
+                                nextDay.setDate(targetDate.getDate() + 1);
+                                targetDate = nextDay;
+                            }
+                        }
+                        targetDateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
+                    }
+                } else {
+                    const wlDate = new Date(wl.started);
+                    targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
+                }
+
+                if (targetDateStr >= startDate && targetDateStr <= endDate && workingDaysSet.has(targetDateStr)) {
+                    totalSec += wl.timeSpentSeconds;
+                }
+            });
+            return totalSec;
+        };
+
         wlIssues.forEach(issue => {
             const actualEnd = issue.fields.customfield_10009 || issue.fields.resolutiondate || null;
             const wls = issue.fields.worklog?.worklogs || [];
@@ -887,7 +933,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const tasks = doneIssues.map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
             const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
-            const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
+            const totalSec = getIssueSecondsForMonth(issue);
             let resolvedDate = null;
             if (issue.fields.resolutiondate) {
                 const resDate = new Date(issue.fields.resolutiondate);
@@ -925,7 +971,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 parent_key: parentKey,
                 time_spent_hours: secToH(totalSec),
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
-                has_worklog: userWls.length > 0,
+                has_worklog: totalSec > 0,
                 url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: originalEstimate,
                 actual_start: actualStart,
@@ -947,7 +993,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         }).map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
             const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
-            const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
+            const totalSec = getIssueSecondsForMonth(issue);
 
             return {
                 key: issue.key,
@@ -958,7 +1004,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 status: issue.fields.status.name,
                 time_spent_hours: secToH(totalSec),
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
-                has_worklog: userWls.length > 0,
+                has_worklog: totalSec > 0,
                 url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: issue.fields.timeoriginalestimate || null,
                 actual_start: issue.fields.customfield_10008 || null,
@@ -984,7 +1030,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         }).map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
             const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
-            const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
+            const totalSec = getIssueSecondsForMonth(issue);
 
             return {
                 key: issue.key,
@@ -995,7 +1041,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 status: issue.fields.status.name,
                 time_spent_hours: secToH(totalSec),
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
-                has_worklog: userWls.length > 0,
+                has_worklog: totalSec > 0,
                 url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: issue.fields.timeoriginalestimate || null,
                 actual_start: issue.fields.customfield_10008 || null,
