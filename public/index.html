@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -700,6 +701,10 @@
             <button class="btn btn-ghost" onclick="openModal()" id="btn-add-month">
                 <span>＋</span> Thêm tháng
             </button>
+            <button class="btn btn-ghost" id="btn-export" onclick="exportExcel()">
+                <span class="btn-icon" id="export-icon">📥</span>
+                <span id="export-label">Xuất Excel</span>
+            </button>
             <button class="btn btn-primary" id="btn-refresh" onclick="refresh()">
                 <span class="btn-icon" id="refresh-icon">🔄</span>
                 <span id="refresh-label">Cập nhật</span>
@@ -1018,6 +1023,71 @@ async function refresh() {
     }
 }
 
+
+async function exportExcel() {
+    if (!currentMonth) {
+        showToast('Vui lòng chọn tháng trước.', 'info');
+        return;
+    }
+
+    const btn   = document.getElementById('btn-export');
+    const icon  = document.getElementById('export-icon');
+    const label = document.getElementById('export-label');
+    btn.disabled = true;
+    icon.style.animation = 'spin 0.6s linear infinite';
+    label.textContent = 'Đang xuất...';
+
+    try {
+        // Refresh để lấy data Done mới nhất
+        showToast('⏳ Đang cập nhật dữ liệu từ Jira...', 'info', 8000);
+        const res  = await fetch(`/api/refresh/${currentMonth}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        render(data);
+
+        // Build worksheet rows
+        const rows = [
+            ['Key', 'Summary', 'Status', 'Time Spent']  // header
+        ];
+        (data.tasks || []).forEach(t => {
+            rows.push([
+                t.key,
+                t.summary,
+                t.status,
+                Math.round((t.time_spent_hours || 0) * 3600)  // seconds
+            ]);
+        });
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+
+        // Column widths
+        ws['!cols'] = [
+            { wch: 16 },   // Key
+            { wch: 60 },   // Summary
+            { wch: 18 },   // Status
+            { wch: 14 }    // Time Spent
+        ];
+
+        // Style header row (bold)
+        const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: '1e1b4b' } } };
+        ['A1','B1','C1','D1'].forEach(cell => {
+            if (ws[cell]) ws[cell].s = headerStyle;
+        });
+
+        XLSX.utils.book_append_sheet(wb, ws, currentMonth);
+        XLSX.writeFile(wb, `JiraBot_${currentMonth}.xlsx`);
+
+        showToast(`✅ Xuất Excel thành công! ${data.tasks.length} tasks`, 'success');
+    } catch (e) {
+        showToast(`❌ Lỗi xuất Excel: ${e.message}`, 'error', 6000);
+    } finally {
+        btn.disabled = false;
+        icon.style.animation = '';
+        label.textContent = 'Xuất Excel';
+    }
+}
 
 // ── Modal ──────────────────────────────────────────────────────────────────
 
