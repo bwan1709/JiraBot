@@ -2793,10 +2793,17 @@
 
             if (activeTasks.length === 0) {
                 const colSpan = 8;
-                document.getElementById('task-tbody').innerHTML =
-                    `<tr><td colspan="${colSpan}" style="text-align:center;color:var(--muted);padding:40px;">Không có task nào trong danh sách</td></tr>`;
+                let html = `<tr><td colspan="${colSpan}" style="text-align:center;color:var(--muted);padding:40px;">Không có task nào trong danh sách</td></tr>`;
+                for (let idx = 1; idx < PAGE_SIZE; idx++) {
+                    html += `
+                        <tr style="pointer-events: none;">
+                            <td colspan="${colSpan}" style="padding: 11px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.03);">&nbsp;</td>
+                        </tr>
+                    `;
+                }
+                document.getElementById('task-tbody').innerHTML = html;
             } else {
-                document.getElementById('task-tbody').innerHTML = pageTasks.map((t, i) => {
+                let html = pageTasks.map((t, i) => {
                     let column6 = '';
                     let column8 = '';
 
@@ -2845,6 +2852,16 @@
                 </tr>
             `;
                 }).join('');
+
+                const emptyCount = PAGE_SIZE - pageTasks.length;
+                for (let idx = 0; idx < emptyCount; idx++) {
+                    html += `
+                        <tr style="pointer-events: none;">
+                            <td colspan="8" style="padding: 11px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.03);">&nbsp;</td>
+                        </tr>
+                    `;
+                }
+                document.getElementById('task-tbody').innerHTML = html;
             }
 
             const totalLogged = activeTasks.filter(t => t.has_worklog).reduce((s, t) => s + t.time_spent_hours, 0);
