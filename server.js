@@ -808,12 +808,12 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
             searchAll(
                 req.user,
-                `worklogAuthor = '${req.user.account_id}' AND ((customfield_10009 >= '${startDate}' AND customfield_10009 <= '${endDate}') OR (customfield_10009 is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'))`,
+                `worklogAuthor = '${req.user.account_id}' AND ((cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}') OR (cf[10009] is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'))`,
                 WL_FIELDS
             ),
             searchAll(
                 req.user,
-                `assignee = '${req.user.account_id}' AND status = Done AND customfield_10009 >= '${startDate}' AND customfield_10009 <= '${endDate}'`,
+                `assignee = '${req.user.account_id}' AND status = Done AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}'`,
                 DONE_FIELDS
             ),
             searchAll(
