@@ -802,18 +802,18 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const t0 = Date.now();
 
         // ── Chạy song song 4 queries ──────────────────────────────────────
-        const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10009';
+        const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10009,resolutiondate';
         const DONE_FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,labels,duedate,customfield_10015,customfield_10016,parent,created';
 
         const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
             searchAll(
                 req.user,
-                `worklogAuthor = '${req.user.account_id}' AND ((cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}') OR (cf[10009] is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'))`,
+                `worklogAuthor = '${req.user.account_id}' AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}') OR (cf[10009] is empty AND resolved is not empty AND resolved >= '${startDate}' AND resolved <= '${endDate}') OR (cf[10009] is empty AND resolved is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'))`,
                 WL_FIELDS
             ),
             searchAll(
                 req.user,
-                `assignee = '${req.user.account_id}' AND status = Done AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}'`,
+                `assignee = '${req.user.account_id}' AND status = Done AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}') OR (cf[10009] is empty AND resolved >= '${startDate}' AND resolved <= '${endDate}'))`,
                 DONE_FIELDS
             ),
             searchAll(
@@ -836,14 +836,14 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         wdList.forEach(d => { dailySecMap[d.date] = 0; });
 
         wlIssues.forEach(issue => {
-            const actualEnd = issue.fields.customfield_10009 || null;
+            const actualEnd = issue.fields.customfield_10009 || issue.fields.resolutiondate || null;
             const wls = issue.fields.worklog?.worklogs || [];
             wls.forEach(wl => {
                 if (wl.author.accountId !== req.user.account_id) return;
                 
                 let targetDateStr;
                 if (actualEnd) {
-                    // Task có actualEnd, quy thuộc worklog về tháng của actualEnd
+                    // Task đã hoàn thành (có actualEnd hoặc resolutiondate), quy thuộc worklog về tháng hoàn thành
                     const wlDate = new Date(wl.started);
                     const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
                     
@@ -855,9 +855,9 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                         // Nếu cùng tháng, giữ nguyên ngày của worklog
                         targetDateStr = logDate;
                     } else {
-                        // Nếu lệch tháng (ví dụ log muộn ở tháng sau), quy về ngày actualEnd của task đó
+                        // Nếu lệch tháng (ví dụ log muộn ở tháng sau), quy về ngày hoàn thành của task đó
                         let targetDate = new Date(actualEnd);
-                        // Nếu ngày actualEnd trùng vào Chủ Nhật (không có trong calendar làm việc), lùi về Thứ Bảy gần nhất hoặc tiến lên Thứ Hai
+                        // Nếu ngày hoàn thành trùng vào Chủ Nhật (không có trong calendar làm việc), lùi về Thứ Bảy gần nhất hoặc tiến lên Thứ Hai
                         if (targetDate.getDay() === 0) {
                             const prevDay = new Date(targetDate);
                             prevDay.setDate(targetDate.getDate() - 1);
@@ -872,7 +872,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                         targetDateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
                     }
                 } else {
-                    // Task chưa có actualEnd (đang in-progress/todo), dùng ngày của worklog
+                    // Task chưa hoàn thành (đang in-progress/todo), dùng ngày của worklog
                     const wlDate = new Date(wl.started);
                     targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
                 }
