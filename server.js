@@ -802,18 +802,18 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const t0 = Date.now();
 
         // ── Chạy song song 4 queries ──────────────────────────────────────
-        const WL_FIELDS   = 'summary,worklog,issuetype,project,status';
+        const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10009';
         const DONE_FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,labels,duedate,customfield_10015,customfield_10016,parent,created';
 
         const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
             searchAll(
                 req.user,
-                `worklogAuthor = '${req.user.account_id}' AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'`,
+                `worklogAuthor = '${req.user.account_id}' AND ((customfield_10009 >= '${startDate}' AND customfield_10009 <= '${endDate}') OR (customfield_10009 is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'))`,
                 WL_FIELDS
             ),
             searchAll(
                 req.user,
-                `assignee = '${req.user.account_id}' AND status = Done AND updated >= '${startDate}' AND updated <= '${endDate}'`,
+                `assignee = '${req.user.account_id}' AND status = Done AND customfield_10009 >= '${startDate}' AND customfield_10009 <= '${endDate}'`,
                 DONE_FIELDS
             ),
             searchAll(
@@ -836,13 +836,49 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         wdList.forEach(d => { dailySecMap[d.date] = 0; });
 
         wlIssues.forEach(issue => {
+            const actualEnd = issue.fields.customfield_10009 || null;
             const wls = issue.fields.worklog?.worklogs || [];
             wls.forEach(wl => {
                 if (wl.author.accountId !== req.user.account_id) return;
-                const wlDate = new Date(wl.started);
-                const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
-                if (logDate >= startDate && logDate <= endDate && dailySecMap[logDate] !== undefined) {
-                     dailySecMap[logDate] += wl.timeSpentSeconds;
+                
+                let targetDateStr;
+                if (actualEnd) {
+                    // Task có actualEnd, quy thuộc worklog về tháng của actualEnd
+                    const wlDate = new Date(wl.started);
+                    const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
+                    
+                    const aeDate = new Date(actualEnd);
+                    const aeMonthStr = `${aeDate.getFullYear()}-${pad(aeDate.getMonth() + 1)}`;
+                    const wlMonthStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}`;
+                    
+                    if (wlMonthStr === aeMonthStr) {
+                        // Nếu cùng tháng, giữ nguyên ngày của worklog
+                        targetDateStr = logDate;
+                    } else {
+                        // Nếu lệch tháng (ví dụ log muộn ở tháng sau), quy về ngày actualEnd của task đó
+                        let targetDate = new Date(actualEnd);
+                        // Nếu ngày actualEnd trùng vào Chủ Nhật (không có trong calendar làm việc), lùi về Thứ Bảy gần nhất hoặc tiến lên Thứ Hai
+                        if (targetDate.getDay() === 0) {
+                            const prevDay = new Date(targetDate);
+                            prevDay.setDate(targetDate.getDate() - 1);
+                            if (prevDay.getMonth() === targetDate.getMonth()) {
+                                targetDate = prevDay;
+                            } else {
+                                const nextDay = new Date(targetDate);
+                                nextDay.setDate(targetDate.getDate() + 1);
+                                targetDate = nextDay;
+                            }
+                        }
+                        targetDateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
+                    }
+                } else {
+                    // Task chưa có actualEnd (đang in-progress/todo), dùng ngày của worklog
+                    const wlDate = new Date(wl.started);
+                    targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
+                }
+
+                if (targetDateStr >= startDate && targetDateStr <= endDate && dailySecMap[targetDateStr] !== undefined) {
+                     dailySecMap[targetDateStr] += wl.timeSpentSeconds;
                 }
             });
         });
