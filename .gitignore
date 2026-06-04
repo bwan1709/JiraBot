@@ -6,8 +6,10 @@ node_modules/
 .env.local
 .env.*.local
 
-# Cached Jira data (generated files)
-reports/data/
+# SQLite database (generated - không commit)
+data/jirabot.db
+data/jirabot.db-shm
+data/jirabot.db-wal
 
 # Logs
 *.log

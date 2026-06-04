@@ -3,6 +3,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
+const Database = require('better-sqlite3');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,7 @@ const BASE_URL    = process.env.ATLASSIAN_BASE_URL    || 'https://pvqpm.atlassia
 const JIRA_API    = `https://api.atlassian.com/ex/jira/${CLOUD_ID}/rest/api/3`;
 
 const DATA_DIR    = path.join(__dirname, 'data');
+const DB_PATH     = path.join(DATA_DIR, 'jirabot.db');
 const PUBLIC_DIR  = path.join(__dirname, 'public');
 
 // Middleware to disable caching for API endpoints and static assets in dev
@@ -129,7 +131,7 @@ function buildWorkingDays(year, month) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
-function secToH(s) { return Math.round((s / 3600) * 100) / 100; }  // 2 decimal = max 36s error vs 6min error with 1 decimal
+function secToH(s) { return Math.round((s / 3600) * 100) / 100; }
 
 function fmtH(h) {
     if (h === 0) return '0h';
@@ -141,6 +143,252 @@ function fmtH(h) {
 const MONTH_NAMES_VI = ['', 'Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
     'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 
+// ─── SQLite Database ───────────────────────────────────────────────────────
+
+let db;
+
+function initDb() {
+    db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL'); // Better concurrent read performance
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS months (
+            year_month        TEXT PRIMARY KEY,
+            month             INTEGER NOT NULL,
+            year              INTEGER NOT NULL,
+            month_label       TEXT,
+            standard_hours    REAL DEFAULT 0,
+            total_logged      REAL DEFAULT 0,
+            required_to_date  REAL DEFAULT 0,
+            logged_to_date    REAL DEFAULT 0,
+            net_to_date       REAL DEFAULT 0,
+            progress_pct      REAL DEFAULT 0,
+            task_count        INTEGER DEFAULT 0,
+            in_progress_count INTEGER DEFAULT 0,
+            todo_count        INTEGER DEFAULT 0,
+            no_worklog_count  INTEGER DEFAULT 0,
+            last_updated      TEXT,
+            today             TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+            key                TEXT NOT NULL,
+            year_month         TEXT NOT NULL,
+            task_type          TEXT NOT NULL,
+            summary            TEXT,
+            project            TEXT,
+            project_key        TEXT,
+            issue_type         TEXT,
+            status             TEXT,
+            resolved_date      TEXT,
+            parent_key         TEXT,
+            time_spent_hours   REAL DEFAULT 0,
+            time_spent_display TEXT,
+            has_worklog        INTEGER DEFAULT 0,
+            url                TEXT,
+            original_estimate  INTEGER,
+            actual_start       TEXT,
+            actual_end         TEXT,
+            labels             TEXT,
+            duedate            TEXT,
+            start_date         TEXT,
+            story_points       REAL,
+            missing_fields     TEXT,
+            created            TEXT,
+            PRIMARY KEY (key, year_month),
+            FOREIGN KEY (year_month) REFERENCES months(year_month) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS working_days (
+            year_month   TEXT NOT NULL,
+            date         TEXT NOT NULL,
+            day_label    TEXT,
+            day_name     TEXT,
+            dow          INTEGER,
+            is_saturday  INTEGER DEFAULT 0,
+            standard     REAL DEFAULT 0,
+            logged       REAL DEFAULT 0,
+            PRIMARY KEY (year_month, date),
+            FOREIGN KEY (year_month) REFERENCES months(year_month) ON DELETE CASCADE
+        );
+    `);
+
+    console.log('  💾 SQLite DB initialized:', DB_PATH);
+}
+
+// Save full month data (upsert) using a single transaction
+function saveMonthData(result) {
+    const upsertMonth = db.prepare(`
+        INSERT OR REPLACE INTO months
+            (year_month, month, year, month_label, standard_hours, total_logged,
+             required_to_date, logged_to_date, net_to_date, progress_pct,
+             task_count, in_progress_count, todo_count, no_worklog_count,
+             last_updated, today)
+        VALUES
+            (@year_month, @month, @year, @month_label, @standard_hours, @total_logged,
+             @required_to_date, @logged_to_date, @net_to_date, @progress_pct,
+             @task_count, @in_progress_count, @todo_count, @no_worklog_count,
+             @last_updated, @today)
+    `);
+
+    const upsertTask = db.prepare(`
+        INSERT OR REPLACE INTO tasks
+            (key, year_month, task_type, summary, project, project_key, issue_type,
+             status, resolved_date, parent_key, time_spent_hours, time_spent_display,
+             has_worklog, url, original_estimate, actual_start, actual_end,
+             labels, duedate, start_date, story_points, missing_fields, created)
+        VALUES
+            (@key, @year_month, @task_type, @summary, @project, @project_key, @issue_type,
+             @status, @resolved_date, @parent_key, @time_spent_hours, @time_spent_display,
+             @has_worklog, @url, @original_estimate, @actual_start, @actual_end,
+             @labels, @duedate, @start_date, @story_points, @missing_fields, @created)
+    `);
+
+    const upsertDay = db.prepare(`
+        INSERT OR REPLACE INTO working_days
+            (year_month, date, day_label, day_name, dow, is_saturday, standard, logged)
+        VALUES
+            (@year_month, @date, @day_label, @day_name, @dow, @is_saturday, @standard, @logged)
+    `);
+
+    const deleteTasks = db.prepare(`DELETE FROM tasks WHERE year_month = ?`);
+    const deleteDays  = db.prepare(`DELETE FROM working_days WHERE year_month = ?`);
+
+    const runAll = db.transaction((r) => {
+        // Upsert month summary
+        upsertMonth.run({
+            year_month:        r.year_month,
+            month:             r.month,
+            year:              r.year,
+            month_label:       r.month_label,
+            standard_hours:    r.standard_hours,
+            total_logged:      r.total_logged,
+            required_to_date:  r.required_to_date,
+            logged_to_date:    r.logged_to_date,
+            net_to_date:       r.net_to_date,
+            progress_pct:      r.progress_pct,
+            task_count:        r.task_count,
+            in_progress_count: r.in_progress_count,
+            todo_count:        r.todo_count,
+            no_worklog_count:  r.no_worklog_count,
+            last_updated:      r.last_updated,
+            today:             r.today
+        });
+
+        // Replace tasks (delete then insert to handle removed tasks)
+        deleteTasks.run(r.year_month);
+        const taskToRow = (t, type) => ({
+            key:                t.key,
+            year_month:         r.year_month,
+            task_type:          type,
+            summary:            t.summary,
+            project:            t.project,
+            project_key:        t.project_key,
+            issue_type:         t.issue_type,
+            status:             t.status,
+            resolved_date:      t.resolved_date    || null,
+            parent_key:         t.parent_key        || null,
+            time_spent_hours:   t.time_spent_hours,
+            time_spent_display: t.time_spent_display || null,
+            has_worklog:        t.has_worklog ? 1 : 0,
+            url:                t.url,
+            original_estimate:  t.original_estimate || null,
+            actual_start:       t.actual_start      || null,
+            actual_end:         t.actual_end        || null,
+            labels:             JSON.stringify(t.labels || []),
+            duedate:            t.duedate            || null,
+            start_date:         t.start_date         || null,
+            story_points:       t.story_points != null ? t.story_points : null,
+            missing_fields:     JSON.stringify(t.missing_fields || []),
+            created:            t.created            || null,
+        });
+        r.tasks.forEach(t => upsertTask.run(taskToRow(t, 'done')));
+        r.in_progress_tasks.forEach(t => upsertTask.run(taskToRow(t, 'in_progress')));
+        r.todo_tasks.forEach(t => upsertTask.run(taskToRow(t, 'todo')));
+
+        // Replace working days
+        deleteDays.run(r.year_month);
+        r.working_days.forEach(d => upsertDay.run({
+            year_month:  r.year_month,
+            date:        d.date,
+            day_label:   d.day_label,
+            day_name:    d.day_name,
+            dow:         d.dow,
+            is_saturday: d.is_saturday ? 1 : 0,
+            standard:    d.standard,
+            logged:      d.logged
+        }));
+    });
+
+    runAll(result);
+}
+
+// Reconstruct full result object from DB (matches old JSON format exactly)
+function loadMonthData(ym) {
+    const meta = db.prepare(`SELECT * FROM months WHERE year_month = ?`).get(ym);
+    if (!meta) return null;
+
+    const rowToTask = (row) => ({
+        key:                row.key,
+        summary:            row.summary,
+        project:            row.project,
+        project_key:        row.project_key,
+        issue_type:         row.issue_type,
+        status:             row.status,
+        resolved_date:      row.resolved_date,
+        parent_key:         row.parent_key,
+        time_spent_hours:   row.time_spent_hours,
+        time_spent_display: row.time_spent_display,
+        has_worklog:        row.has_worklog === 1,
+        url:                row.url,
+        original_estimate:  row.original_estimate,
+        actual_start:       row.actual_start,
+        actual_end:         row.actual_end,
+        labels:             JSON.parse(row.labels || '[]'),
+        duedate:            row.duedate,
+        start_date:         row.start_date,
+        story_points:       row.story_points,
+        missing_fields:     JSON.parse(row.missing_fields || '[]'),
+        created:            row.created
+    });
+
+    const tasks           = db.prepare(`SELECT * FROM tasks WHERE year_month = ? AND task_type = 'done' ORDER BY resolved_date DESC`).all(ym).map(rowToTask);
+    const in_progress_tasks = db.prepare(`SELECT * FROM tasks WHERE year_month = ? AND task_type = 'in_progress' ORDER BY key`).all(ym).map(rowToTask);
+    const todo_tasks      = db.prepare(`SELECT * FROM tasks WHERE year_month = ? AND task_type = 'todo' ORDER BY key`).all(ym).map(rowToTask);
+    const working_days    = db.prepare(`SELECT * FROM working_days WHERE year_month = ? ORDER BY date`).all(ym).map(row => ({
+        date:        row.date,
+        day_label:   row.day_label,
+        day_name:    row.day_name,
+        dow:         row.dow,
+        is_saturday: row.is_saturday === 1,
+        standard:    row.standard,
+        logged:      row.logged
+    }));
+
+    return {
+        month:             meta.month,
+        year:              meta.year,
+        year_month:        meta.year_month,
+        month_label:       meta.month_label,
+        standard_hours:    meta.standard_hours,
+        total_logged:      meta.total_logged,
+        required_to_date:  meta.required_to_date,
+        logged_to_date:    meta.logged_to_date,
+        net_to_date:       meta.net_to_date,
+        progress_pct:      meta.progress_pct,
+        task_count:        meta.task_count,
+        in_progress_count: meta.in_progress_count,
+        todo_count:        meta.todo_count,
+        no_worklog_count:  meta.no_worklog_count,
+        last_updated:      meta.last_updated,
+        today:             meta.today,
+        tasks,
+        in_progress_tasks,
+        todo_tasks,
+        working_days
+    };
+}
+
 // ─── Jira Fetch Helpers ────────────────────────────────────────────────────
 
 // Fetch one page — used to kick off pagination
@@ -149,7 +397,7 @@ async function fetchPage(jql, fields, startAt = 0, maxResults = 100) {
     return jiraGet(`/search/jql?${q}`);
 }
 
-// Fetch all pages, but fire first page immediately and paginate in parallel
+// Fetch all pages, fire first page immediately and paginate in parallel
 async function searchAll(jql, fields) {
     const first = await fetchPage(jql, fields, 0);
     if (!first.issues || first.issues.length === 0) return [];
@@ -157,7 +405,6 @@ async function searchAll(jql, fields) {
     const results = [...first.issues];
     const total = first.total;
 
-    // If there are more pages, fetch them all in parallel
     if (total > results.length) {
         const remaining = [];
         for (let startAt = results.length; startAt < total; startAt += 100) {
@@ -172,34 +419,28 @@ async function searchAll(jql, fields) {
 
 // ─── Routes ────────────────────────────────────────────────────────────────
 
-// GET /api/months — list available months (from data dir)
-app.get('/api/months', async (req, res) => {
+// GET /api/months — list available months from DB
+app.get('/api/months', (req, res) => {
     try {
-        await fs.mkdir(DATA_DIR, { recursive: true });
-        const files = await fs.readdir(DATA_DIR);
-        const months = files
-            .filter(f => /^\d{4}-\d{2}\.json$/.test(f))
-            .map(f => f.replace('.json', ''))
-            .sort()
-            .reverse();
-        res.json({ months });
+        const rows = db.prepare(`SELECT year_month FROM months ORDER BY year_month DESC`).all();
+        res.json({ months: rows.map(r => r.year_month) });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// GET /api/data/:yearMonth — get cached data
-app.get('/api/data/:yearMonth', async (req, res) => {
+// GET /api/data/:yearMonth — load data from DB
+app.get('/api/data/:yearMonth', (req, res) => {
     try {
-        const file = path.join(DATA_DIR, `${req.params.yearMonth}.json`);
-        const content = await fs.readFile(file, 'utf-8');
-        res.json(JSON.parse(content));
-    } catch {
-        res.status(404).json({ error: 'no_data' });
+        const data = loadMonthData(req.params.yearMonth);
+        if (!data) return res.status(404).json({ error: 'no_data' });
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
-// POST /api/refresh/:yearMonth — fetch fresh data from Jira and save
+// POST /api/refresh/:yearMonth — fetch fresh data from Jira and save to DB
 app.post('/api/refresh/:yearMonth', async (req, res) => {
     try {
         if (!EMAIL || !API_TOKEN || API_TOKEN === 'YOUR_API_TOKEN_HERE') {
@@ -213,7 +454,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             throw new Error('Tháng không hợp lệ. Định dạng: YYYY-MM (vd: 2026-06)');
         }
 
-                const startDate = `${year}-${pad(month)}-01`;
+        const startDate = `${year}-${pad(month)}-01`;
         const endDate   = `${year}-${pad(month)}-${getDaysInMonth(year, month)}`;
         const d_today   = new Date();
         const today     = `${d_today.getFullYear()}-${pad(d_today.getMonth() + 1)}-${pad(d_today.getDate())}`;
@@ -274,13 +515,12 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 resolvedDate = `${resDate.getFullYear()}-${pad(resDate.getMonth() + 1)}-${pad(resDate.getDate())}`;
             }
 
-            // Fields for validation
             const originalEstimate = issue.fields.timeoriginalestimate || null;
             const actualStart = issue.fields.customfield_10008 || null;
             const actualEnd = issue.fields.customfield_10009 || null;
             const labels = issue.fields.labels || [];
             const duedate = issue.fields.duedate || null;
-            const startDate = issue.fields.customfield_10015 || null;
+            const startDateField = issue.fields.customfield_10015 || null;
             const storyPoints = issue.fields.customfield_10016 || null;
             const parentKey = issue.fields.parent ? issue.fields.parent.key : null;
 
@@ -291,7 +531,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             if (userWls.length === 0) missingFields.push('Time tracking (Worklog)');
             if (labels.length === 0) missingFields.push('Labels');
             if (!duedate) missingFields.push('Due date');
-            if (!startDate) missingFields.push('Start date');
+            if (!startDateField) missingFields.push('Start date');
             if (storyPoints === null || storyPoints === undefined) missingFields.push('Story point estimate');
             if (issue.fields.issuetype.subtask && !parentKey) missingFields.push('Parent task');
 
@@ -308,13 +548,12 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
                 has_worklog: userWls.length > 0,
                 url: `${BASE_URL}/browse/${issue.key}`,
-                // Detailed fields
                 original_estimate: originalEstimate,
                 actual_start: actualStart,
                 actual_end: actualEnd,
                 labels,
                 duedate,
-                start_date: startDate,
+                start_date: startDateField,
                 story_points: storyPoints,
                 missing_fields: missingFields,
                 created: issue.fields.created
@@ -331,14 +570,6 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             const userWls = allWls.filter(w => w.author.accountId === ACCOUNT_ID);
             const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
 
-            const originalEstimate = issue.fields.timeoriginalestimate || null;
-            const actualStart = issue.fields.customfield_10008 || null;
-            const actualEnd = issue.fields.customfield_10009 || null;
-            const labels = issue.fields.labels || [];
-            const duedate = issue.fields.duedate || null;
-            const startDate = issue.fields.customfield_10015 || null;
-            const storyPoints = issue.fields.customfield_10016 || null;
-
             return {
                 key: issue.key,
                 summary: issue.fields.summary,
@@ -350,13 +581,13 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
                 has_worklog: userWls.length > 0,
                 url: `${BASE_URL}/browse/${issue.key}`,
-                original_estimate: originalEstimate,
-                actual_start: actualStart,
-                actual_end: actualEnd,
-                labels,
-                duedate,
-                start_date: startDate,
-                story_points: storyPoints,
+                original_estimate: issue.fields.timeoriginalestimate || null,
+                actual_start: issue.fields.customfield_10008 || null,
+                actual_end: issue.fields.customfield_10009 || null,
+                labels: issue.fields.labels || [],
+                duedate: issue.fields.duedate || null,
+                start_date: issue.fields.customfield_10015 || null,
+                story_points: issue.fields.customfield_10016 || null,
                 parent_key: issue.fields.parent ? issue.fields.parent.key : null,
                 created: issue.fields.created
             };
@@ -376,14 +607,6 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             const userWls = allWls.filter(w => w.author.accountId === ACCOUNT_ID);
             const totalSec = userWls.reduce((s, w) => s + w.timeSpentSeconds, 0);
 
-            const originalEstimate = issue.fields.timeoriginalestimate || null;
-            const actualStart = issue.fields.customfield_10008 || null;
-            const actualEnd = issue.fields.customfield_10009 || null;
-            const labels = issue.fields.labels || [];
-            const duedate = issue.fields.duedate || null;
-            const startDate = issue.fields.customfield_10015 || null;
-            const storyPoints = issue.fields.customfield_10016 || null;
-
             return {
                 key: issue.key,
                 summary: issue.fields.summary,
@@ -395,34 +618,33 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 time_spent_display: totalSec > 0 ? fmtH(secToH(totalSec)) : null,
                 has_worklog: userWls.length > 0,
                 url: `${BASE_URL}/browse/${issue.key}`,
-                original_estimate: originalEstimate,
-                actual_start: actualStart,
-                actual_end: actualEnd,
-                labels,
-                duedate,
-                start_date: startDate,
-                story_points: storyPoints,
+                original_estimate: issue.fields.timeoriginalestimate || null,
+                actual_start: issue.fields.customfield_10008 || null,
+                actual_end: issue.fields.customfield_10009 || null,
+                labels: issue.fields.labels || [],
+                duedate: issue.fields.duedate || null,
+                start_date: issue.fields.customfield_10015 || null,
+                story_points: issue.fields.customfield_10016 || null,
                 parent_key: issue.fields.parent ? issue.fields.parent.key : null,
                 created: issue.fields.created
             };
         }).sort((a, b) => a.key.localeCompare(b.key));
 
-        // ── 3. Build result ──
+        // ── Build result ───────────────────────────────────────────────────
         const workingDays = wdList.map(d => ({
             ...d,
             logged: secToH(dailySecMap[d.date] || 0)
         }));
 
-        // Tính tổng từ RAW seconds (không sum qua logged đã round) → tránh lỗi kép
         const totalSecAll   = wdList.reduce((s, d) => s + (dailySecMap[d.date] || 0), 0);
         const standardHours = workingDays.reduce((s, d) => s + d.standard, 0);
         const totalLogged   = secToH(totalSecAll);
 
-        const pastDays      = workingDays.filter(d => d.date <= today);
-        const pastDates     = new Set(pastDays.map(d => d.date));
-        const totalSecPast  = wdList.filter(d => pastDates.has(d.date)).reduce((s, d) => s + (dailySecMap[d.date] || 0), 0);
-        const reqToDate     = pastDays.reduce((s, d) => s + d.standard, 0);
-        const logToDate     = secToH(totalSecPast);
+        const pastDays     = workingDays.filter(d => d.date <= today);
+        const pastDates    = new Set(pastDays.map(d => d.date));
+        const totalSecPast = wdList.filter(d => pastDates.has(d.date)).reduce((s, d) => s + (dailySecMap[d.date] || 0), 0);
+        const reqToDate    = pastDays.reduce((s, d) => s + d.standard, 0);
+        const logToDate    = secToH(totalSecPast);
         const noWorklogCount = tasks.filter(t => !t.has_worklog).length;
 
         const result = {
@@ -447,11 +669,8 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             working_days: workingDays
         };
 
-        await fs.mkdir(DATA_DIR, { recursive: true });
-        await fs.writeFile(
-            path.join(DATA_DIR, `${year}-${pad(month)}.json`),
-            JSON.stringify(result, null, 2)
-        );
+        // ── Save to SQLite (single transaction) ───────────────────────────
+        saveMonthData(result);
 
         console.log(`  ✅ Xong! ${tasks.length} tasks Done, ${inProgressTasks.length} tasks In Progress, ${todoTasks.length} tasks To-do | ${totalLogged}h / ${standardHours}h`);
         res.json(result);
@@ -503,15 +722,9 @@ app.post('/api/issue/:issueKey/worklog', async (req, res) => {
         if (!timeSpent) {
             return res.status(400).json({ error: 'Thiếu thời gian timeSpent (vd: 2h, 45m)' });
         }
-        const payload = {
-            timeSpent
-        };
-        if (started) {
-            payload.started = started;
-        }
-        if (comment) {
-            payload.comment = makeAdfComment(comment);
-        }
+        const payload = { timeSpent };
+        if (started) payload.started = started;
+        if (comment) payload.comment = makeAdfComment(comment);
         await jiraPost(`/issue/${issueKey}/worklog`, payload);
         res.json({ success: true });
     } catch (e) {
@@ -523,45 +736,22 @@ app.post('/api/issue/:issueKey/worklog', async (req, res) => {
 app.post('/api/issue/:issueKey/update-fields', async (req, res) => {
     try {
         const { issueKey } = req.params;
-        const {
-            originalEstimate,
-            labels,
-            parentKey,
-            duedate,
-            startDate,
-            storyPoints,
-            actualStart,
-            actualEnd
-        } = req.body;
+        const { originalEstimate, labels, parentKey, duedate, startDate, storyPoints, actualStart, actualEnd } = req.body;
 
         const fields = {};
 
-        if (originalEstimate !== undefined) {
-            fields.timetracking = { originalEstimate };
-        }
+        if (originalEstimate !== undefined) fields.timetracking = { originalEstimate };
         if (labels !== undefined) {
             fields.labels = Array.isArray(labels) ? labels : labels.split(',').map(s => s.trim()).filter(Boolean);
         }
-        if (parentKey !== undefined) {
-            if (parentKey) {
-                fields.parent = { key: parentKey.trim() };
-            }
-        }
-        if (duedate !== undefined) {
-            fields.duedate = duedate || null;
-        }
-        if (startDate !== undefined) {
-            fields.customfield_10015 = startDate || null;
-        }
+        if (parentKey !== undefined && parentKey) fields.parent = { key: parentKey.trim() };
+        if (duedate !== undefined) fields.duedate = duedate || null;
+        if (startDate !== undefined) fields.customfield_10015 = startDate || null;
         if (storyPoints !== undefined) {
             fields.customfield_10016 = storyPoints !== null && storyPoints !== '' ? parseFloat(storyPoints) : null;
         }
-        if (actualStart !== undefined) {
-            fields.customfield_10008 = actualStart || null;
-        }
-        if (actualEnd !== undefined) {
-            fields.customfield_10009 = actualEnd || null;
-        }
+        if (actualStart !== undefined) fields.customfield_10008 = actualStart || null;
+        if (actualEnd !== undefined) fields.customfield_10009 = actualEnd || null;
 
         console.log(`📡 Đang cập nhật fields cho task ${issueKey}:`, fields);
         await jiraPut(`/issue/${issueKey}`, { fields });
@@ -577,6 +767,7 @@ app.post('/api/issue/:issueKey/update-fields', async (req, res) => {
 async function start() {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.mkdir(PUBLIC_DIR, { recursive: true });
+    initDb();
     app.listen(PORT, () => {
         console.log('\n╔══════════════════════════════════════════╗');
         console.log('║   🚀 JiraBot Time Report Server          ║');
