@@ -1043,6 +1043,67 @@
         body.modal-open {
             overflow: hidden;
         }
+
+        /* ── Dropdown ── */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 6px);
+            z-index: 1000;
+            background: #141722;
+            border: 1px solid var(--border-2);
+            border-radius: 12px;
+            padding: 6px;
+            min-width: 190px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeInDropdown 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeInDropdown {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .dropdown-item:hover {
+            background: var(--surface-2);
+            color: var(--text);
+        }
     </style>
 </head>
 
@@ -1526,18 +1587,24 @@
                 <button class="btn btn-ghost" onclick="openModal()" id="btn-add-month">
                     <span>＋</span> Thêm tháng
                 </button>
-                <button class="btn btn-ghost" id="btn-export-daily" onclick="exportDailyExcel()">
-                    <span class="btn-icon" id="export-daily-icon">📅</span>
-                    <span id="export-daily-label">Xuất báo cáo ngày</span>
-                </button>
-                <button class="btn btn-ghost" id="btn-export" onclick="exportExcel()">
-                    <span class="btn-icon" id="export-icon">📥</span>
-                    <span id="export-label">Xuất Excel</span>
-                </button>
-                <button class="btn btn-ghost" id="btn-export-word" onclick="exportWord()">
-                    <span class="btn-icon" id="export-word-icon">📄</span>
-                    <span id="export-word-label">Xuất báo cáo tháng</span>
-                </button>
+                <div class="dropdown" id="dropdown-export">
+                    <button class="btn btn-ghost" id="btn-export-main" onclick="toggleExportDropdown(event)">
+                        <span class="btn-icon" id="export-main-icon">📤</span>
+                        <span id="export-main-label">Xuất báo cáo</span>
+                        <span style="font-size: 10px; margin-left: 2px; opacity: 0.7;">▼</span>
+                    </button>
+                    <div class="dropdown-menu" id="export-menu">
+                        <button class="dropdown-item" onclick="triggerExport('daily', event)">
+                            <span>📅</span> Xuất báo cáo ngày
+                        </button>
+                        <button class="dropdown-item" onclick="triggerExport('excel', event)">
+                            <span>📥</span> Xuất Excel (Tháng)
+                        </button>
+                        <button class="dropdown-item" onclick="triggerExport('word', event)">
+                            <span>📄</span> Xuất báo cáo tháng (Word)
+                        </button>
+                    </div>
+                </div>
                 <button class="btn btn-primary" id="btn-refresh" onclick="refresh()">
                     <span class="btn-icon" id="refresh-icon">🔄</span>
                     <span id="refresh-label">Cập nhật</span>
@@ -1640,16 +1707,16 @@
                     <div style="display: flex; align-items: center; gap: 14px;">
                         <div class="section-title">📋 Danh sách Tasks</div>
                         <div class="task-tabs">
-                            <button class="task-tab-btn active" id="tab-done" onclick="switchTaskTab('done')">
-                                Done <span class="count-badge" id="done-badge"
+                            <button class="task-tab-btn active" id="tab-todo" onclick="switchTaskTab('todo')">
+                                To-do <span class="count-badge" id="todo-badge"
                                     style="background:rgba(255,255,255,0.06); border:none; color:var(--muted); font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
                             </button>
                             <button class="task-tab-btn" id="tab-inprogress" onclick="switchTaskTab('inprogress')">
                                 In Progress <span class="count-badge" id="inprogress-badge"
                                     style="background:rgba(255,255,255,0.06); border:none; color:var(--muted); font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
                             </button>
-                            <button class="task-tab-btn" id="tab-todo" onclick="switchTaskTab('todo')">
-                                To-do <span class="count-badge" id="todo-badge"
+                            <button class="task-tab-btn" id="tab-done" onclick="switchTaskTab('done')">
+                                Done <span class="count-badge" id="done-badge"
                                     style="background:rgba(255,255,255,0.06); border:none; color:var(--muted); font-size:10px; padding:1px 6px; margin-left:2px;">0</span>
                             </button>
                             <button class="task-tab-btn" id="tab-missing" onclick="switchTaskTab('missing')">
@@ -1707,7 +1774,7 @@
         let availableMonths = [];
         let charts = { daily: null, cumul: null, deficit: null };
         let currentData = null;
-        let activeTaskTab = 'done';
+        let activeTaskTab = 'todo';
         let activeProject = 'all';
         let currentPage = 1;
         const PAGE_SIZE = 20;
@@ -1917,15 +1984,49 @@
         }
 
 
+        function toggleExportDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('export-menu');
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        function triggerExport(type, event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('export-menu');
+            if (menu) {
+                menu.classList.remove('show');
+            }
+            if (type === 'daily') {
+                exportDailyExcel();
+            } else if (type === 'excel') {
+                exportExcel();
+            } else if (type === 'word') {
+                exportWord();
+            }
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(event) {
+            const menu = document.getElementById('export-menu');
+            if (menu && menu.classList.contains('show')) {
+                const dropdown = document.getElementById('dropdown-export');
+                if (dropdown && !dropdown.contains(event.target)) {
+                    menu.classList.remove('show');
+                }
+            }
+        });
+
         async function exportExcel() {
             if (!currentMonth) {
                 showToast('Vui lòng chọn tháng trước.', 'info');
                 return;
             }
 
-            const btn = document.getElementById('btn-export');
-            const icon = document.getElementById('export-icon');
-            const label = document.getElementById('export-label');
+            const btn = document.getElementById('btn-export-main');
+            const icon = document.getElementById('export-main-icon');
+            const label = document.getElementById('export-main-label');
             btn.disabled = true;
             icon.style.animation = 'spin 0.6s linear infinite';
             label.textContent = 'Đang xuất...';
@@ -1983,14 +2084,14 @@
             } finally {
                 btn.disabled = false;
                 icon.style.animation = '';
-                label.textContent = 'Xuất Excel';
+                label.textContent = 'Xuất báo cáo';
             }
         }
 
         async function exportDailyExcel() {
-            const btn = document.getElementById('btn-export-daily');
-            const icon = document.getElementById('export-daily-icon');
-            const label = document.getElementById('export-daily-label');
+            const btn = document.getElementById('btn-export-main');
+            const icon = document.getElementById('export-main-icon');
+            const label = document.getElementById('export-main-label');
             btn.disabled = true;
             icon.style.animation = 'spin 0.6s linear infinite';
             label.textContent = 'Đang xuất...';
@@ -2092,16 +2193,16 @@
             } finally {
                 btn.disabled = false;
                 icon.style.animation = '';
-                label.textContent = 'Xuất báo cáo ngày';
+                label.textContent = 'Xuất báo cáo';
             }
         }
 
         async function exportWord() {
             if (!currentMonth) { showToast('Vui lòng chọn tháng trước.', 'info'); return; }
 
-            const btn = document.getElementById('btn-export-word');
-            const icon = document.getElementById('export-word-icon');
-            const label = document.getElementById('export-word-label');
+            const btn = document.getElementById('btn-export-main');
+            const icon = document.getElementById('export-main-icon');
+            const label = document.getElementById('export-main-label');
             btn.disabled = true; icon.style.animation = 'spin 0.6s linear infinite'; label.textContent = 'Đang xuất...';
 
             try {
@@ -2452,7 +2553,7 @@
                 console.error(e);
                 showToast(`❌ Lỗi Xuất báo cáo tháng: ${e.message}`, 'error', 6000);
             } finally {
-                btn.disabled = false; icon.style.animation = ''; label.textContent = 'Xuất báo cáo tháng';
+                btn.disabled = false; icon.style.animation = ''; label.textContent = 'Xuất báo cáo';
             }
         }
 
