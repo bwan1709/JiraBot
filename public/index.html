@@ -2100,7 +2100,7 @@
                 ];
 
                 // ════════════════ BÁO CÁO CÔNG VIỆC TABLE ════════════════════════
-                const reportTable = new Table({
+                const performedTable = new Table({
                     width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
                         new TableRow({
                             tableHeader: true, children: [
@@ -2115,25 +2115,15 @@
                                 mkCellC([R('Đã hoàn thành')]),
                             ]
                         })),
-                        new TableRow({ children: [mkSpanCell('B/KẾ HOẠCH THÁNG', 2)] }),
-                        new TableRow({
-                            children: [
-                                mkCell([R('')]),
-                                mkCellC([R('')]),
-                            ]
-                        }),
-                        new TableRow({
-                            children: [
-                                mkCell([R('')]),
-                                mkCellC([R('')]),
-                            ]
-                        }),
-                        new TableRow({
-                            children: [
-                                mkCell([R('')]),
-                                mkCellC([R('')]),
-                            ]
-                        }),
+                    ]
+                });
+
+                const planTable = new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
+                        new TableRow({ children: [mkSpanCell('B/KẾ HOẠCH THÁNG', 1)] }),
+                        new TableRow({ children: [mkCell([R('')])] }),
+                        new TableRow({ children: [mkCell([R('')])] }),
+                        new TableRow({ children: [mkCell([R('')])] }),
                     ]
                 });
 
@@ -2216,7 +2206,9 @@
                             properties: { page: { margin: { top: 1200, bottom: 720, left: 1080, right: 720, header: 562, footer: 562 } } },
                             children: [
                                 P([RB('II/. BÁO CÁO CÔNG VIỆC', { size: 24 })], { spacing: { before: 160, after: 160 } }),
-                                reportTable,
+                                performedTable,
+                                P([R('')], { spacing: { before: 120, after: 40 } }),
+                                planTable,
                                 P([R('')], { spacing: { before: 200, after: 60 } }),
                                 opinionTable,
                                 P([R('')]),
