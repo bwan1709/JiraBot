@@ -1203,7 +1203,11 @@
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div class="form-row" style="margin-bottom: 0;">
+                            <label class="form-label">Chức danh *</label>
+                            <input class="form-input" id="user-jobtitle" type="text" required placeholder="Ví dụ: Backend Developer">
+                        </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Quyền hệ thống (Role) *</label>
                             <select class="form-input" id="user-role">
@@ -1290,9 +1294,15 @@
                             <input class="form-input" id="profile-department" type="text" placeholder="Ví dụ: Acorneri IT">
                         </div>
                     </div>
-                    <div class="form-row" style="margin-bottom: 0;">
-                        <label class="form-label">Email (không thể thay đổi)</label>
-                        <input class="form-input" id="profile-email" type="email" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div class="form-row" style="margin-bottom: 0;">
+                            <label class="form-label">Chức danh</label>
+                            <input class="form-input" id="profile-jobtitle" type="text" placeholder="Ví dụ: Backend Developer">
+                        </div>
+                        <div class="form-row" style="margin-bottom: 0;">
+                            <label class="form-label">Email (không thể thay đổi)</label>
+                            <input class="form-input" id="profile-email" type="email" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        </div>
                     </div>
                 </div>
 
@@ -1665,7 +1675,7 @@
                 currentUser = meData.user;
                 
                 // Update user details in header
-                document.getElementById('user-info-text').textContent = `${currentUser.full_name} · ${currentUser.email}`;
+                document.getElementById('user-info-text').textContent = `${currentUser.full_name} ${currentUser.job_title ? `(${currentUser.job_title})` : ''} · ${currentUser.email}`;
                 
                 // Show Users Mgmt button only if Admin
                 if (currentUser.role === 'admin') {
@@ -2114,7 +2124,7 @@
                                 P([RB(`THÁNG ${m}/${y}`, { size: 26 })],
                                     { alignment: AlignmentType.CENTER, spacing: { before: 0, after: 300 } }),
                                 P([RB('Họ & tên: '), R(currentUser ? currentUser.full_name : 'Hoàng Bình Quân')]),
-                                P([RB('Chức danh: '), R(currentUser ? (currentUser.role === 'admin' ? 'Quản trị viên / Trưởng bộ phận' : 'Nhân viên') : 'Backend Developer')]),
+                                P([RB('Chức danh: '), R(currentUser && currentUser.job_title ? currentUser.job_title : 'Nhân viên')]),
                                 P([RB('Bộ phận: '), R(currentUser ? currentUser.department : 'Acorneri IT')], { spacing: { before: 60, after: 240 } }),
                                 P([R('')]),
                                 P([RB('I/ PHẦN ĐÁNH GIÁ (số điểm 01 -10)', { size: 24 })],
@@ -2172,7 +2182,17 @@
                 const blob = await Packer.toBlob(doc);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = `BaoCao_${m}_${y}.docx`; a.click();
+                
+                const userName = (currentUser && currentUser.full_name) ? currentUser.full_name.trim() : 'User';
+                const now = new Date();
+                const dd = String(now.getDate()).padStart(2, '0');
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const yyyy = now.getFullYear();
+                const exportDate = `${dd}${mm}${yyyy}`;
+                
+                a.href = url; 
+                a.download = `${userName}_BCCV_T${m}_${exportDate}.docx`; 
+                a.click();
                 URL.revokeObjectURL(url);
                 showToast(`✅ Xuất báo cáo tháng thành công! ${data.tasks.length} tasks`, 'success');
             } catch (e) {
@@ -3216,7 +3236,7 @@
                                 ${u.role === 'admin' ? 'Admin' : 'Client'}
                             </span>
                         </td>
-                        <td style="font-size:12px;color:var(--muted);">${escHtml(u.role === 'admin' ? 'Quản trị viên' : 'Nhân viên')} / ${escHtml(u.department || '—')}</td>
+                        <td style="font-size:12px;color:var(--muted);">${escHtml(u.job_title || '—')} / ${escHtml(u.department || '—')}</td>
                         <td style="text-align: center; white-space: nowrap;">
                             <button class="btn btn-ghost" onclick="editUser(${u.id})" style="padding: 4px 8px; font-size: 11px; margin-right: 4px; border-radius: 6px; border-color: rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color: var(--text);">✏️ Sửa</button>
                             <button class="btn btn-ghost" onclick="deleteUser(${u.id})" style="padding: 4px 8px; font-size: 11px; border-radius: 6px; border-color: rgba(244,63,94,0.25); background: rgba(244,63,94,0.05); color: #fb7185;">🗑 Xóa</button>
@@ -3234,6 +3254,7 @@
             document.getElementById('user-password').value = '';
             document.getElementById('user-fullname').value = '';
             document.getElementById('user-department').value = '';
+            document.getElementById('user-jobtitle').value = '';
             document.getElementById('user-role').value = 'client';
             document.getElementById('user-token').value = '';
             document.getElementById('user-accountid').value = '';
@@ -3252,6 +3273,7 @@
             document.getElementById('user-password').value = ''; // keep empty so it won't change
             document.getElementById('user-fullname').value = u.full_name || '';
             document.getElementById('user-department').value = u.department || '';
+            document.getElementById('user-jobtitle').value = u.job_title || '';
             document.getElementById('user-role').value = u.role || 'client';
             document.getElementById('user-token').value = u.token || '';
             document.getElementById('user-accountid').value = u.account_id || '';
@@ -3287,7 +3309,8 @@
                 base_url: baseurl,
                 full_name: fullname,
                 role,
-                department
+                department,
+                job_title: jobTitle
             };
 
             // Only add password to payload if it's new user or manually specified for edit
@@ -3367,6 +3390,7 @@
             document.getElementById('profile-email').value = u.email || '';
             document.getElementById('profile-fullname').value = u.full_name || '';
             document.getElementById('profile-department').value = u.department || '';
+            document.getElementById('profile-jobtitle').value = u.job_title || '';
             document.getElementById('profile-password').value = '';
             document.getElementById('profile-confirm').value = '';
             // Jira info — fetch from /api/me with full details
@@ -3389,6 +3413,7 @@
             e.preventDefault();
             const fullname = document.getElementById('profile-fullname').value.trim();
             const department = document.getElementById('profile-department').value.trim();
+            const jobTitle = document.getElementById('profile-jobtitle').value.trim();
             const password = document.getElementById('profile-password').value;
             const confirm = document.getElementById('profile-confirm').value;
             const jiraEmail = document.getElementById('profile-jira-email').value.trim();
@@ -3410,6 +3435,7 @@
             const payload = {
                 full_name: fullname,
                 department,
+                job_title: jobTitle,
                 email_jira: jiraEmail,
                 token,
                 account_id: accountid,

@@ -227,6 +227,7 @@ function initDb() {
             full_name   TEXT,
             role        TEXT,
             department  TEXT,
+            job_title   TEXT,
             created_at  TEXT
         );
 
@@ -296,6 +297,14 @@ function initDb() {
         );
     `);
 
+    // Migration: Add job_title column if it doesn't exist
+    const tableInfo = db.pragma('table_info(users)');
+    const hasJobTitle = tableInfo.some(col => col.name === 'job_title');
+    if (!hasJobTitle) {
+        db.exec('ALTER TABLE users ADD COLUMN job_title TEXT');
+        console.log('  ⚙️ Added job_title column to users table');
+    }
+
     // Seed default admin user from .env if table is empty
     const defaultEmail    = process.env.ADMIN_EMAIL    || 'admin@jirabot.local';
     const defaultPassword = process.env.ADMIN_PASSWORD || 'ilovecds';
@@ -309,8 +318,8 @@ function initDb() {
     const count = db.prepare('SELECT count(*) as c FROM users').get().c;
     if (count === 0) {
         db.prepare(`
-            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
             defaultEmail,
             defaultPassword,
@@ -321,6 +330,7 @@ function initDb() {
             defaultFullName,
             'admin',
             defaultDept,
+            'Administrator',
             new Date().toISOString()
         );
         console.log('  👤 Seeded default admin:', defaultEmail);
@@ -563,7 +573,8 @@ app.post('/api/login', (req, res) => {
                 email: user.email,
                 full_name: user.full_name,
                 role: user.role,
-                department: user.department
+                department: user.department,
+                job_title: user.job_title
             }
         });
     } catch (e) {
@@ -617,7 +628,8 @@ app.get('/api/me', (req, res) => {
         full_name: u.full_name,
         role: u.role,
         department: u.department,
-        base_url: u.base_url
+        base_url: u.base_url,
+        job_title: u.job_title || ''
     };
     if (full) {
         payload.token = u.token || '';
@@ -631,7 +643,7 @@ app.get('/api/me', (req, res) => {
 // PUT /api/profile — Update own profile (any authenticated user)
 app.put('/api/profile', (req, res) => {
     try {
-        const { full_name, department, email_jira, token, account_id, cloud_id, base_url, password } = req.body;
+        const { full_name, department, job_title, email_jira, token, account_id, cloud_id, base_url, password } = req.body;
 
         if (!full_name || !full_name.trim()) {
             return res.status(400).json({ error: 'Vui lòng nhập Họ & Tên.' });
@@ -644,6 +656,7 @@ app.put('/api/profile', (req, res) => {
         const fields = {
             full_name: full_name.trim(),
             department: (department || '').trim(),
+            job_title: (job_title || '').trim(),
             token: (token || '').trim(),
             account_id: (account_id || '').trim(),
             cloud_id: (cloud_id || '').trim(),
@@ -674,7 +687,7 @@ function requireAdmin(req, res, next) {
 // GET /api/users — List all users (Admin only)
 app.get('/api/users', requireAdmin, (req, res) => {
     try {
-        const users = db.prepare(`SELECT id, email, token, cloud_id, account_id, base_url, full_name, role, department, created_at FROM users ORDER BY id ASC`).all();
+        const users = db.prepare(`SELECT id, email, token, cloud_id, account_id, base_url, full_name, role, department, job_title, created_at FROM users ORDER BY id ASC`).all();
         res.json({ users });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -684,7 +697,7 @@ app.get('/api/users', requireAdmin, (req, res) => {
 // POST /api/users — Create new user (Admin only)
 app.post('/api/users', requireAdmin, (req, res) => {
     try {
-        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department } = req.body;
+        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title } = req.body;
         if (!email || !token || !cloud_id || !account_id || !base_url) {
             return res.status(400).json({ error: 'Thiếu các thông tin bắt buộc (email, token, cloud_id, account_id, base_url)' });
         }
@@ -693,9 +706,9 @@ app.post('/api/users', requireAdmin, (req, res) => {
         const userRole = role || 'client';
 
         const info = db.prepare(`
-            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, new Date().toISOString());
+            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, job_title || null, new Date().toISOString());
 
         res.json({ success: true, userId: info.lastInsertRowId });
     } catch (e) {
@@ -710,7 +723,7 @@ app.post('/api/users', requireAdmin, (req, res) => {
 app.put('/api/users/:id', requireAdmin, (req, res) => {
     try {
         const { id } = req.params;
-        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department } = req.body;
+        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title } = req.body;
         if (!email || !token || !cloud_id || !account_id || !base_url) {
             return res.status(400).json({ error: 'Thiếu các thông tin bắt buộc' });
         }
@@ -726,9 +739,9 @@ app.put('/api/users/:id', requireAdmin, (req, res) => {
 
         db.prepare(`
             UPDATE users 
-            SET email = ?, password = ?, token = ?, cloud_id = ?, account_id = ?, base_url = ?, full_name = ?, role = ?, department = ?
+            SET email = ?, password = ?, token = ?, cloud_id = ?, account_id = ?, base_url = ?, full_name = ?, role = ?, department = ?, job_title = ?
             WHERE id = ?
-        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, id);
+        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, job_title || null, id);
 
         res.json({ success: true });
     } catch (e) {
