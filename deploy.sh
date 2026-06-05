@@ -1,18 +1,15 @@
 #!/bin/bash
-# deploy.sh — Chạy trên VPS để pull code mới và restart app
+# deploy-docker.sh — Chạy trên VPS để pull code mới và rebuild Docker container
 set -e
 
-APP_DIR="/var/www/jirabot"
-
 echo "📦 Pulling latest code..."
-cd "$APP_DIR"
 git pull origin main
 
-echo "📚 Installing dependencies..."
-npm ci --omit=dev
+echo "🔄 Rebuilding and restarting Docker container..."
+docker compose up -d --build
 
-echo "🔄 Restarting PM2..."
-pm2 reload ecosystem.config.js --update-env
+echo "🧹 Cleaning up unused Docker images..."
+docker image prune -f
 
 echo "✅ Deploy thành công!"
-pm2 status jirabot
+docker compose ps
