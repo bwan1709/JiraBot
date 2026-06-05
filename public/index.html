@@ -1526,6 +1526,10 @@
                 <button class="btn btn-ghost" onclick="openModal()" id="btn-add-month">
                     <span>＋</span> Thêm tháng
                 </button>
+                <button class="btn btn-ghost" id="btn-export-daily" onclick="exportDailyExcel()">
+                    <span class="btn-icon" id="export-daily-icon">📅</span>
+                    <span id="export-daily-label">Xuất báo cáo ngày</span>
+                </button>
                 <button class="btn btn-ghost" id="btn-export" onclick="exportExcel()">
                     <span class="btn-icon" id="export-icon">📥</span>
                     <span id="export-label">Xuất Excel</span>
@@ -1980,6 +1984,115 @@
                 btn.disabled = false;
                 icon.style.animation = '';
                 label.textContent = 'Xuất Excel';
+            }
+        }
+
+        async function exportDailyExcel() {
+            const btn = document.getElementById('btn-export-daily');
+            const icon = document.getElementById('export-daily-icon');
+            const label = document.getElementById('export-daily-label');
+            btn.disabled = true;
+            icon.style.animation = 'spin 0.6s linear infinite';
+            label.textContent = 'Đang xuất...';
+
+            try {
+                const d = new Date();
+                const pad = (n) => String(n).padStart(2, '0');
+                const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                
+                showToast(`⏳ Đang tải báo cáo ngày ${fmtDate(todayStr)} từ Jira...`, 'info', 8000);
+                const res = await fetch(`/api/daily-report?date=${todayStr}`);
+                const resData = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(resData.error || 'Lỗi tải báo cáo ngày');
+                }
+                
+                const tasks = resData.tasks || [];
+                if (tasks.length === 0) {
+                    showToast(`ℹ️ Không có công việc nào có worklog trong ngày hôm nay (${fmtDate(todayStr)}).`, 'info');
+                    return;
+                }
+
+                // Helper to format estimate/time
+                const secondsToJiraEstimate = (sec) => {
+                    if (!sec) return '—';
+                    const h = Math.floor(sec / 3600);
+                    const m = Math.round((sec % 3600) / 60);
+                    if (h > 0 && m > 0) return `${h}h ${m}m`;
+                    if (h > 0) return `${h}h`;
+                    if (m > 0) return `${m}m`;
+                    return '—';
+                };
+
+                const formatISOToDateTime = (isoStr) => {
+                    if (!isoStr) return '—';
+                    const date = new Date(isoStr);
+                    if (isNaN(date.getTime())) return '—';
+                    const dd = pad(date.getDate());
+                    const mm = pad(date.getMonth() + 1);
+                    const yyyy = date.getFullYear();
+                    const hh = pad(date.getHours());
+                    const min = pad(date.getMinutes());
+                    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+                };
+
+                // Build worksheet rows
+                const wsData = [
+                    ['Key', 'Summary', 'Original Estimate', 'Actual Start', 'Actual End', 'Time Spent']
+                ];
+                
+                tasks.forEach(t => {
+                    wsData.push([
+                        t.key,
+                        t.summary || '—',
+                        secondsToJiraEstimate(t.original_estimate),
+                        formatISOToDateTime(t.actual_start),
+                        formatISOToDateTime(t.actual_end),
+                        secondsToJiraEstimate(t.time_spent_seconds)
+                    ]);
+                });
+
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                // Add links to the Key column
+                tasks.forEach((t, i) => {
+                    const cellAddress = `A${i + 2}`;
+                    if (ws[cellAddress]) {
+                        ws[cellAddress] = {
+                            v: t.key,
+                            t: 's',
+                            l: {
+                                Target: t.url,
+                                Tooltip: `Click để mở ${t.key} trên Jira`
+                            }
+                        };
+                    }
+                });
+
+                // Column widths
+                ws['!cols'] = [
+                    { wch: 16 },   // Key
+                    { wch: 60 },   // Summary
+                    { wch: 18 },   // Original Estimate
+                    { wch: 20 },   // Actual Start
+                    { wch: 20 },   // Actual End
+                    { wch: 14 }    // Time Spent
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo ngày');
+                XLSX.writeFile(wb, `BaoCaoNgay_${todayStr}.xlsx`);
+
+                showToast(`✅ Xuất báo cáo ngày thành công! ${tasks.length} tasks`, 'success');
+            } catch (e) {
+                console.error(e);
+                showToast(`❌ Lỗi xuất báo cáo ngày: ${e.message}`, 'error', 6000);
+            } finally {
+                btn.disabled = false;
+                icon.style.animation = '';
+                label.textContent = 'Xuất báo cáo ngày';
             }
         }
 
@@ -3141,16 +3254,25 @@
         }
 
         function openStatusModal(key) {
+            let t = null;
+            if (currentData) {
+                t = (currentData.tasks || []).find(x => x.key === key) ||
+                    (currentData.in_progress_tasks || []).find(x => x.key === key) ||
+                    (currentData.todo_tasks || []).find(x => x.key === key);
+            }
+            const currentStatus = t ? t.status : 'Đang tải...';
+
             document.getElementById('status-task-key').value = key;
             document.getElementById('status-modal-sub').textContent = `Chuyển trạng thái cho task ${key}`;
 
             const select = document.getElementById('status-select');
-            select.innerHTML = '<option value="">⏳ Đang tải danh trạng thái...</option>';
+            select.innerHTML = `<option value="" disabled selected>${currentStatus}</option>`;
 
             const submitBtn = document.getElementById('status-submit-btn');
             submitBtn.disabled = true;
 
             document.getElementById('status-modal').classList.add('active');
+            updateBodyScrollLock();
 
             // Fetch allowed transitions
             fetch(`/api/issue/${key}/transitions?t=${Date.now()}`)
@@ -3162,8 +3284,14 @@
                         select.innerHTML = '<option value="">Không có trạng thái chuyển đổi khả dụng</option>';
                         return;
                     }
-                    select.innerHTML = ts.map(t => `<option value="${t.id}">${t.name} (→ ${t.toStatus})</option>`).join('');
-                    submitBtn.disabled = false;
+                    
+                    let optionsHtml = `<option value="" disabled selected>${currentStatus}</option>`;
+                    optionsHtml += ts.map(t => `<option value="${t.id}">${t.toStatus}</option>`).join('');
+                    select.innerHTML = optionsHtml;
+                    
+                    select.onchange = () => {
+                        submitBtn.disabled = !select.value;
+                    };
                 })
                 .catch(e => {
                     select.innerHTML = '<option value="">❌ Không thể tải trạng thái</option>';
@@ -3173,6 +3301,7 @@
 
         function closeStatusModal() {
             document.getElementById('status-modal').classList.remove('active');
+            updateBodyScrollLock();
         }
 
         async function submitStatusTransition() {

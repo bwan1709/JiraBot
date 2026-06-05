@@ -285,8 +285,16 @@
             backdrop-filter: blur(8px);
         }
 
-        .toast.error { border-left: 4px solid var(--red); }
-        .toast.success { border-left: 4px solid var(--green); }
+        .toast.error {
+            border-color: rgba(244, 63, 94, 0.35);
+            background: rgba(244, 63, 94, 0.12);
+            color: #fb7185;
+        }
+        .toast.success {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+        }
 
         @keyframes toastIn {
             from { opacity: 0; transform: translateY(12px) scale(0.95); }

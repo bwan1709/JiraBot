@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db, loadMonthData } = require('../db');
-const { jiraGet, jiraPost, jiraPut, refreshMonthData } = require('../services/jira.service');
+const { jiraGet, jiraPost, jiraPut, searchAll, refreshMonthData } = require('../services/jira.service');
 
 // GET /api/months — list available months from DB
 router.get('/months', (req, res) => {
@@ -143,6 +143,67 @@ router.post('/issue/:issueKey/update-fields', async (req, res) => {
         res.json({ success: true });
     } catch (e) {
         console.error(`❌ Lỗi cập nhật fields cho task ${req.params.issueKey}:`, e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/daily-report — fetch daily tasks for a specific date (YYYY-MM-DD)
+router.get('/daily-report', async (req, res) => {
+    try {
+        const { date } = req.query;
+        if (!date) {
+            return res.status(400).json({ error: 'Thiếu tham số date (YYYY-MM-DD)' });
+        }
+        if (!req.user.token || !req.user.cloud_id || !req.user.account_id || !req.user.base_url) {
+            return res.status(400).json({ error: 'JIRA_MISSING_INFO' });
+        }
+
+        const JQL = `worklogAuthor = '${req.user.account_id}' AND worklogDate = '${date}'`;
+        const FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124';
+
+        const issues = await searchAll(req.user, JQL, FIELDS);
+
+        const getActualStart = (fields) => fields.customfield_10008 || null;
+        const getActualEnd = (fields) => fields.customfield_10009 || fields.customfield_10124 || fields.resolutiondate || null;
+        const pad = (n) => String(n).padStart(2, '0');
+        const getLocalDateStr = (dateVal) => {
+            if (!dateVal) return null;
+            const d = new Date(dateVal);
+            if (isNaN(d.getTime())) return null;
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        };
+
+        const tasks = issues.map(issue => {
+            const actualStart = getActualStart(issue.fields);
+            const actualEnd = getActualEnd(issue.fields);
+            
+            // Calculate time spent today on this task
+            const wls = issue.fields.worklog?.worklogs || [];
+            let timeSpentSeconds = 0;
+            wls.forEach(wl => {
+                if (wl.author.accountId !== req.user.account_id) return;
+                
+                const targetDateStr = getLocalDateStr(actualEnd) || getLocalDateStr(actualStart) || getLocalDateStr(wl.started);
+                const startedDateStr = getLocalDateStr(wl.started);
+                if (targetDateStr === date || startedDateStr === date) {
+                    timeSpentSeconds += wl.timeSpentSeconds;
+                }
+            });
+
+            return {
+                key: issue.key,
+                summary: issue.fields.summary,
+                url: `${req.user.base_url}/browse/${issue.key}`,
+                original_estimate: issue.fields.timeoriginalestimate || 0, // in seconds
+                actual_start: actualStart,
+                actual_end: actualEnd,
+                time_spent_seconds: timeSpentSeconds
+            };
+        });
+
+        res.json({ date, tasks });
+    } catch (e) {
+        console.error('❌ Lỗi tải báo cáo ngày:', e.message);
         res.status(500).json({ error: e.message });
     }
 });
