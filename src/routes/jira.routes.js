@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { db, loadMonthData } = require('../db');
 const { jiraGet, jiraPost, jiraPut, refreshMonthData } = require('../services/jira.service');
-const { makeAdfComment } = require('../utils/helpers');
 
 // GET /api/months — list available months from DB
 router.get('/months', (req, res) => {
@@ -86,8 +85,8 @@ router.post('/issue/:issueKey/worklog', async (req, res) => {
         }
         const payload = { timeSpent };
         if (started) payload.started = started;
-        if (comment) payload.comment = makeAdfComment(comment);
-        await jiraPost(req.user, `/issue/${issueKey}/worklog`, payload);
+        if (comment) payload.comment = comment;
+        await jiraPost(req.user, `/rest/api/2/issue/${issueKey}/worklog`, payload);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });

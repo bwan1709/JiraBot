@@ -45,31 +45,11 @@ function buildWorkingDays(year, month) {
     return days;
 }
 
-function makeAdfComment(text) {
-    if (!text) return undefined;
-    return {
-        type: "doc",
-        version: 1,
-        content: [
-            {
-                type: "paragraph",
-                content: [
-                    {
-                        text: text,
-                        type: "text"
-                    }
-                ]
-            }
-        ]
-    };
-}
-
 module.exports = {
     MONTH_NAMES_VI,
     pad,
     secToH,
     fmtH,
     getDaysInMonth,
-    buildWorkingDays,
-    makeAdfComment
+    buildWorkingDays
 };

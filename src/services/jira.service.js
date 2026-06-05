@@ -9,8 +9,10 @@ function getAuthHeader(user) {
 }
 
 async function jiraGet(user, endpoint) {
-    const userJiraApi = `https://api.atlassian.com/ex/jira/${user.cloud_id}/rest/api/3`;
-    const url = endpoint.startsWith('http') ? endpoint : `${userJiraApi}${endpoint}`;
+    const base = `https://api.atlassian.com/ex/jira/${user.cloud_id}`;
+    const url = endpoint.startsWith('http') 
+        ? endpoint 
+        : (endpoint.startsWith('/rest/api/') ? `${base}${endpoint}` : `${base}/rest/api/3${endpoint}`);
     const res = await fetch(url, {
         headers: { 'Authorization': getAuthHeader(user), 'Accept': 'application/json' }
     });
@@ -25,8 +27,10 @@ async function jiraGet(user, endpoint) {
 }
 
 async function jiraPost(user, endpoint, body) {
-    const userJiraApi = `https://api.atlassian.com/ex/jira/${user.cloud_id}/rest/api/3`;
-    const url = endpoint.startsWith('http') ? endpoint : `${userJiraApi}${endpoint}`;
+    const base = `https://api.atlassian.com/ex/jira/${user.cloud_id}`;
+    const url = endpoint.startsWith('http') 
+        ? endpoint 
+        : (endpoint.startsWith('/rest/api/') ? `${base}${endpoint}` : `${base}/rest/api/3${endpoint}`);
     const res = await fetch(url, {
         method: 'POST',
         headers: { 
@@ -47,8 +51,10 @@ async function jiraPost(user, endpoint, body) {
 }
 
 async function jiraPut(user, endpoint, body) {
-    const userJiraApi = `https://api.atlassian.com/ex/jira/${user.cloud_id}/rest/api/3`;
-    const url = endpoint.startsWith('http') ? endpoint : `${userJiraApi}${endpoint}`;
+    const base = `https://api.atlassian.com/ex/jira/${user.cloud_id}`;
+    const url = endpoint.startsWith('http') 
+        ? endpoint 
+        : (endpoint.startsWith('/rest/api/') ? `${base}${endpoint}` : `${base}/rest/api/3${endpoint}`);
     const res = await fetch(url, {
         method: 'PUT',
         headers: { 
