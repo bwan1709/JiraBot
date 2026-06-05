@@ -3456,6 +3456,20 @@
                 loadData(currentMonth);
             }
         }, 5000);
+
+        // Tự động đồng bộ âm thầm với Jira mỗi 5 phút khi tab đang active
+        setInterval(() => {
+            if (currentMonth && !document.hidden) {
+                fetch(`/api/refresh/${currentMonth}`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && !data.error) {
+                            render(data);
+                        }
+                    })
+                    .catch(e => console.error('Lỗi tự động đồng bộ Jira:', e));
+            }
+        }, 5 * 60 * 1000);
     </script>
 </body>
 
