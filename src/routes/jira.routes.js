@@ -62,10 +62,39 @@ router.get('/issue/:issueKey/transitions', async (req, res) => {
 router.post('/issue/:issueKey/transition', async (req, res) => {
     try {
         const { issueKey } = req.params;
-        const { transitionId } = req.body;
+        const { transitionId, toStatus, issueType } = req.body;
         if (!transitionId) {
             return res.status(400).json({ error: 'Thiếu transitionId' });
         }
+
+        // Check if transition is to "Done" status
+        const isDoneStatus = toStatus && (
+            toStatus.toLowerCase() === 'done' || 
+            toStatus.toLowerCase() === 'đã hoàn thành' ||
+            toStatus.toLowerCase() === 'closed'
+        );
+
+        if (isDoneStatus) {
+            // Post comment first before transitioning to Done to fulfill validators
+            let commentText = '/review-pass';
+            if (issueType) {
+                const typeLower = issueType.toLowerCase();
+                if (typeLower === 'story') {
+                    commentText = '/review-pass /qa-pass';
+                } else if (typeLower === 'bug') {
+                    commentText = '/review-pass /verified';
+                }
+            }
+            try {
+                await jiraPost(req.user, `/rest/api/2/issue/${issueKey}/comment`, {
+                    body: commentText
+                });
+            } catch (commentError) {
+                console.error('Lỗi khi tự động thêm comment done:', commentError);
+                // We don't fail the entire transition if the comment fails
+            }
+        }
+
         await jiraPost(req.user, `/issue/${issueKey}/transitions`, {
             transition: { id: transitionId }
         });

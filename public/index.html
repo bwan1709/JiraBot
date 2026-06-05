@@ -1163,6 +1163,7 @@
             <div class="modal-title">🔄 Đổi trạng thái Task</div>
             <div class="modal-sub" id="status-modal-sub">Chuyển trạng thái cho task</div>
             <input type="hidden" id="status-task-key">
+            <input type="hidden" id="status-task-type">
             <div class="form-row">
                 <label class="form-label">Trạng thái mới *</label>
                 <select class="form-input" id="status-select">
@@ -3362,8 +3363,10 @@
                     (currentData.todo_tasks || []).find(x => x.key === key);
             }
             const currentStatus = t ? t.status : 'Đang tải...';
+            const issueType = t ? t.issue_type : '';
 
             document.getElementById('status-task-key').value = key;
+            document.getElementById('status-task-type').value = issueType;
             document.getElementById('status-modal-sub').textContent = `Chuyển trạng thái cho task ${key}`;
 
             const select = document.getElementById('status-select');
@@ -3387,7 +3390,7 @@
                     }
                     
                     let optionsHtml = `<option value="" disabled selected>${currentStatus}</option>`;
-                    optionsHtml += ts.map(t => `<option value="${t.id}">${t.toStatus}</option>`).join('');
+                    optionsHtml += ts.map(t => `<option value="${t.id}" data-to-status="${escHtml(t.toStatus)}">${escHtml(t.toStatus)}</option>`).join('');
                     select.innerHTML = optionsHtml;
                     
                     select.onchange = () => {
@@ -3407,8 +3410,11 @@
 
         async function submitStatusTransition() {
             const key = document.getElementById('status-task-key').value;
+            const issueType = document.getElementById('status-task-type').value;
             const select = document.getElementById('status-select');
             const transitionId = select.value;
+            const selectedOption = select.options[select.selectedIndex];
+            const toStatus = selectedOption ? selectedOption.getAttribute('data-to-status') : '';
 
             if (!transitionId) {
                 showToast('Vui lòng chọn trạng thái mới.', 'error');
@@ -3421,7 +3427,7 @@
                 const res = await fetch(`/api/issue/${key}/transition`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ transitionId })
+                    body: JSON.stringify({ transitionId, toStatus, issueType })
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Lỗi chuyển trạng thái');
