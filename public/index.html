@@ -1177,82 +1177,97 @@
 
     <!-- ── Modal: User Management (Quản lý Users) ── -->
     <div class="modal-overlay" id="users-mgmt-modal">
-        <div class="modal" style="width: 820px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal"
+            style="width: 820px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column;">
             <div class="modal-title">👥 Quản lý Users</div>
             <div class="modal-sub">Thêm, chỉnh sửa hoặc xóa tài khoản người dùng trong hệ thống</div>
-            
+
             <div style="flex: 1; overflow-y: auto; padding-right: 4px; margin-bottom: 15px;">
                 <!-- Form to add/edit user -->
-                <form id="user-form" onsubmit="submitUserForm(event)" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <form id="user-form" onsubmit="submitUserForm(event)"
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
                     <input type="hidden" id="user-id">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Email *</label>
-                            <input class="form-input" id="user-email" type="email" required placeholder="nhanvien@aconneri.vn" autocomplete="off">
+                            <input class="form-input" id="user-email" type="email" required
+                                placeholder="nhanvien@aconneri.vn" autocomplete="off">
                         </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Mật khẩu (mặc định: ilovecds)</label>
-                            <input class="form-input" id="user-password" type="password" placeholder="Để trống nếu giữ nguyên mật khẩu cũ" autocomplete="off">
+                            <input class="form-input" id="user-password" type="password"
+                                placeholder="Để trống nếu giữ nguyên mật khẩu cũ" autocomplete="off">
                         </div>
                     </div>
-                    
+
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Họ & Tên *</label>
-                            <input class="form-input" id="user-fullname" type="text" required placeholder="Ví dụ: Hoàng Bình Quân">
+                            <input class="form-input" id="user-fullname" type="text" required
+                                placeholder="Ví dụ: Nguyễn Văn A">
                         </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Bộ phận *</label>
-                            <input class="form-input" id="user-department" type="text" required placeholder="Ví dụ: Acorneri IT">
+                            <input class="form-input" id="user-department" type="text" required
+                                placeholder="Ví dụ: Acorneri IT">
                         </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Chức danh *</label>
-                            <input class="form-input" id="user-jobtitle" type="text" required placeholder="Ví dụ: Backend Developer">
+                            <input class="form-input" id="user-jobtitle" type="text" required
+                                placeholder="Ví dụ: Backend Developer">
                         </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Quyền hệ thống (Role) *</label>
                             <select class="form-input" id="user-role">
-                               <option value="client">Client (Chỉ xem báo cáo cá nhân)</option>
-                               <option value="admin">Admin (Toàn quyền quản trị hệ thống)</option>
+                                <option value="client">Client (Chỉ xem báo cáo cá nhân)</option>
+                                <option value="admin">Admin (Toàn quyền quản trị hệ thống)</option>
                             </select>
                         </div>
                     </div>
-                    
+
                     <div style="border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 12px;">
-                        <div class="form-label" style="margin-bottom: 8px; color: var(--purple-l);">Thông tin kết nối Jira:</div>
+                        <div class="form-label" style="margin-bottom: 8px; color: var(--purple-l);">Thông tin kết nối
+                            Jira:</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div class="form-row" style="margin-bottom: 0;">
                                 <label class="form-label">Jira API Token *</label>
-                                <input class="form-input" id="user-token" type="password" required placeholder="Nhập API Token Jira">
+                                <input class="form-input" id="user-token" type="password" required
+                                    placeholder="Nhập API Token Jira">
                             </div>
                             <div class="form-row" style="margin-bottom: 0;">
                                 <label class="form-label">Jira Account ID *</label>
-                                <input class="form-input" id="user-accountid" type="text" required placeholder="Mã Account ID trên Jira">
+                                <input class="form-input" id="user-accountid" type="text" required
+                                    placeholder="Mã Account ID trên Jira">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <div class="form-row" style="margin-bottom: 0;">
                                 <label class="form-label">Jira Cloud ID *</label>
-                                <input class="form-input" id="user-cloudid" type="text" required placeholder="Mã Cloud ID của Jira">
+                                <input class="form-input" id="user-cloudid" type="text" required
+                                    placeholder="Mã Cloud ID của Jira">
                             </div>
                             <div class="form-row" style="margin-bottom: 0;">
                                 <label class="form-label">Jira Base URL *</label>
-                                <input class="form-input" id="user-baseurl" type="text" required placeholder="Ví dụ: https://pvqpm.atlassian.net">
+                                <input class="form-input" id="user-baseurl" type="text" required
+                                    placeholder="Ví dụ: https://pvqpm.atlassian.net">
                             </div>
                         </div>
                     </div>
-                    
+
                     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
-                        <button class="btn btn-ghost" type="button" onclick="resetUserForm()" style="padding: 6px 12px; font-size: 12px;">Reset</button>
-                        <button class="btn btn-primary" type="submit" id="btn-save-user" style="padding: 6px 16px; font-size: 12px;">💾 Lưu User</button>
+                        <button class="btn btn-ghost" type="button" onclick="resetUserForm()"
+                            style="padding: 6px 12px; font-size: 12px;">Reset</button>
+                        <button class="btn btn-primary" type="submit" id="btn-save-user"
+                            style="padding: 6px 16px; font-size: 12px;">💾 Lưu User</button>
                     </div>
                 </form>
-                
+
                 <!-- Users List Table -->
-                <div class="table-scroll" style="max-height: 250px; border: 1px solid var(--border); border-radius: 12px;">
+                <div class="table-scroll"
+                    style="max-height: 250px; border: 1px solid var(--border); border-radius: 12px;">
                     <table>
                         <thead>
                             <tr>
@@ -1265,14 +1280,16 @@
                         </thead>
                         <tbody id="users-tbody">
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 20px; color: var(--muted);">Đang tải danh sách người dùng...</td>
+                                <td colspan="5" style="text-align: center; padding: 20px; color: var(--muted);">Đang tải
+                                    danh sách người dùng...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            
-            <div class="modal-actions" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 15px; margin-top: 0;">
+
+            <div class="modal-actions"
+                style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 15px; margin-top: 0;">
                 <button class="btn btn-ghost" onclick="closeUsersMgmtModal()">Đóng</button>
             </div>
         </div>
@@ -1286,54 +1303,74 @@
 
             <form id="profile-form" onsubmit="submitProfileForm(event)">
                 <!-- Thông tin cơ bản -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
-                    <div style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">👤 Thông tin cá nhân</div>
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+                    <div
+                        style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">
+                        👤 Thông tin cá nhân</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Họ &amp; Tên *</label>
-                            <input class="form-input" id="profile-fullname" type="text" required placeholder="Ví dụ: Hoàng Bình Quân">
+                            <input class="form-input" id="profile-fullname" type="text" required
+                                placeholder="Ví dụ: Nguyễn Văn A">
                         </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Bộ phận</label>
-                            <input class="form-input" id="profile-department" type="text" placeholder="Ví dụ: Acorneri IT">
+                            <input class="form-input" id="profile-department" type="text"
+                                placeholder="Ví dụ: Acorneri IT">
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Chức danh</label>
-                            <input class="form-input" id="profile-jobtitle" type="text" placeholder="Ví dụ: Backend Developer">
+                            <input class="form-input" id="profile-jobtitle" type="text"
+                                placeholder="Ví dụ: Backend Developer">
                         </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Email (không thể thay đổi)</label>
-                            <input class="form-input" id="profile-email" type="email" disabled style="opacity: 0.5; cursor: not-allowed;">
+                            <input class="form-input" id="profile-email" type="email" disabled
+                                style="opacity: 0.5; cursor: not-allowed;">
                         </div>
                     </div>
                 </div>
 
                 <!-- Đổi mật khẩu -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
-                    <div style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">🔐 Đổi mật khẩu <span style="font-weight: 400; color: var(--muted); text-transform: none;">(để trống nếu không muốn đổi)</span></div>
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+                    <div
+                        style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">
+                        🔐 Đổi mật khẩu <span style="font-weight: 400; color: var(--muted); text-transform: none;">(để
+                            trống nếu không muốn đổi)</span></div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Mật khẩu mới</label>
-                            <input class="form-input" id="profile-password" type="password" placeholder="••••••••" autocomplete="new-password" minlength="6">
+                            <input class="form-input" id="profile-password" type="password" placeholder="••••••••"
+                                autocomplete="new-password" minlength="6">
                         </div>
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Xác nhận mật khẩu</label>
-                            <input class="form-input" id="profile-confirm" type="password" placeholder="••••••••" autocomplete="new-password">
+                            <input class="form-input" id="profile-confirm" type="password" placeholder="••••••••"
+                                autocomplete="new-password">
                         </div>
                     </div>
                 </div>
 
                 <!-- Kết nối Jira -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <div style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em;">🔗 Kết nối Jira</div>
-                        <button type="button" class="btn btn-ghost" onclick="openJiraGuideModal()" style="font-size: 11px; padding: 4px 10px; height: auto; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); border-radius: 6px; cursor: pointer; color: var(--purple-l);">
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div
+                            style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em;">
+                            🔗 Kết nối Jira</div>
+                        <button type="button" class="btn btn-ghost" onclick="openJiraGuideModal()"
+                            style="font-size: 11px; padding: 4px 10px; height: auto; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); border-radius: 6px; cursor: pointer; color: var(--purple-l);">
                             💡 Hướng dẫn
                         </button>
                     </div>
-                    <div style="font-size: 11px; color: var(--muted); margin-bottom: 12px;">Lấy thông tin tại <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color: var(--purple-l);">Atlassian API Tokens</a></div>
+                    <div style="font-size: 11px; color: var(--muted); margin-bottom: 12px;">Lấy thông tin tại <a
+                            href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank"
+                            style="color: var(--purple-l);">Atlassian API Tokens</a></div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
                             <label class="form-label">Email Jira *</label>
@@ -1356,7 +1393,8 @@
                     </div>
                     <div class="form-row" style="margin-bottom: 0;">
                         <label class="form-label">Jira Base URL *</label>
-                        <input class="form-input" id="profile-baseurl" type="text" placeholder="https://yourcompany.atlassian.net">
+                        <input class="form-input" id="profile-baseurl" type="text"
+                            placeholder="https://yourcompany.atlassian.net">
                     </div>
                 </div>
 
@@ -1370,67 +1408,98 @@
 
     <!-- ── Modal: Hướng dẫn cấu hình Jira ── -->
     <div class="modal-overlay" id="jira-guide-modal" style="z-index: 1010;">
-        <div class="modal" style="width: 580px; max-height: 90vh; overflow-y: auto; background: #141722; border: 1px solid var(--border-2); border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px;">
-                <div class="modal-title" style="margin: 0; font-size: 16px; font-weight: 800;">💡 Hướng dẫn cấu hình kết nối Jira</div>
-                <button type="button" class="btn btn-ghost" onclick="closeJiraGuideModal()" style="padding: 4px 8px; font-size: 18px; line-height: 1; height: auto; border: none; background: transparent; cursor: pointer; color: var(--muted);">&times;</button>
+        <div class="modal"
+            style="width: 580px; max-height: 90vh; overflow-y: auto; background: #141722; border: 1px solid var(--border-2); border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px;">
+                <div class="modal-title" style="margin: 0; font-size: 16px; font-weight: 800;">💡 Hướng dẫn cấu hình kết
+                    nối Jira</div>
+                <button type="button" class="btn btn-ghost" onclick="closeJiraGuideModal()"
+                    style="padding: 4px 8px; font-size: 18px; line-height: 1; height: auto; border: none; background: transparent; cursor: pointer; color: var(--muted);">&times;</button>
             </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 12px; line-height: 1.6; color: var(--text-normal, #e2e8f0);">
+
+            <div
+                style="display: flex; flex-direction: column; gap: 14px; font-size: 12px; line-height: 1.6; color: var(--text-normal, #e2e8f0);">
                 <!-- Step 1 -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
-                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div
+                        style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
                         <span>1️⃣</span> Lấy Jira API Token
                     </div>
                     <ol style="margin: 0; padding-left: 20px; color: var(--muted);">
-                        <li style="margin-bottom: 4px;">Truy cập trang quản lý mã của Atlassian: <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color: var(--purple-l); text-decoration: underline;">Atlassian API Tokens</a>.</li>
+                        <li style="margin-bottom: 4px;">Truy cập trang quản lý mã của Atlassian: <a
+                                href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank"
+                                style="color: var(--purple-l); text-decoration: underline;">Atlassian API Tokens</a>.
+                        </li>
                         <li style="margin-bottom: 4px;">Nhấn nút <strong>Create API token</strong>.</li>
-                        <li style="margin-bottom: 4px;">Nhập nhãn tùy ý (ví dụ: <code>JiraBot</code>) rồi nhấn <strong>Create</strong>.</li>
-                        <li style="margin-bottom: 4px;">Sao chép mã API Token hiển thị (lưu ý: mã này chỉ xuất hiện 1 lần duy nhất) và dán vào ô <strong>Jira API Token</strong>.</li>
+                        <li style="margin-bottom: 4px;">Nhập nhãn tùy ý (ví dụ: <code>JiraBot</code>) rồi nhấn
+                            <strong>Create</strong>.</li>
+                        <li style="margin-bottom: 4px;">Sao chép mã API Token hiển thị (lưu ý: mã này chỉ xuất hiện 1
+                            lần duy nhất) và dán vào ô <strong>Jira API Token</strong>.</li>
                     </ol>
                 </div>
 
                 <!-- Step 2 -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
-                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div
+                        style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
                         <span>2️⃣</span> Lấy Account ID
                     </div>
                     <ol style="margin: 0; padding-left: 20px; color: var(--muted);">
-                        <li style="margin-bottom: 4px;">Truy cập trang cá nhân của bạn bằng cách click vào ảnh đại diện ở góc trên bên phải, chọn <strong>Profile</strong> (hoặc chọn <strong>People</strong> trên thanh menu bên trái và nhấp vào chính mình).</li>
-                        <li style="margin-bottom: 4px;">Xem đường dẫn (URL) trên thanh địa chỉ trình duyệt. URL lúc này sẽ hiển thị định dạng:<br>
-                            <code style="background: rgba(255,255,255,0.05); color: #a78bfa; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; font-family: monospace; word-break: break-all; font-size: 11px;">https://home.atlassian.com/o/.../people/<span style="color: #34d399; font-weight: bold;">712020:a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6</span>?cloudId=...</code>
+                        <li style="margin-bottom: 4px;">Truy cập trang cá nhân của bạn bằng cách click vào ảnh đại diện
+                            ở góc trên bên phải, chọn <strong>Profile</strong> (hoặc chọn <strong>People</strong> trên
+                            thanh menu bên trái và nhấp vào chính mình).</li>
+                        <li style="margin-bottom: 4px;">Xem đường dẫn (URL) trên thanh địa chỉ trình duyệt. URL lúc này
+                            sẽ hiển thị định dạng:<br>
+                            <code
+                                style="background: rgba(255,255,255,0.05); color: #a78bfa; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; font-family: monospace; word-break: break-all; font-size: 11px;">https://home.atlassian.com/o/.../people/<span style="color: #34d399; font-weight: bold;">712020:a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6</span>?cloudId=...</code>
                         </li>
-                        <li style="margin-bottom: 4px;">Sao chép chuỗi mã nằm sau chữ <code>/people/</code> và đứng trước dấu hỏi chấm <code>?</code> rồi dán vào ô <strong>Account ID</strong>.</li>
+                        <li style="margin-bottom: 4px;">Sao chép chuỗi mã nằm sau chữ <code>/people/</code> và đứng
+                            trước dấu hỏi chấm <code>?</code> rồi dán vào ô <strong>Account ID</strong>.</li>
                     </ol>
                 </div>
 
                 <!-- Step 3 -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
-                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div
+                        style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
                         <span>3️⃣</span> Lấy Cloud ID
                     </div>
                     <ol style="margin: 0; padding-left: 20px; color: var(--muted);">
-                        <li style="margin-bottom: 4px;">Xem trực tiếp tại đường dẫn (URL) trang Profile cá nhân của bạn ở Bước 2. Nó có chứa thuộc tính <code>cloudId</code> ở ngay cuối:<br>
-                            <code style="background: rgba(255,255,255,0.05); color: #a78bfa; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; font-family: monospace; word-break: break-all; font-size: 11px;">https://home.atlassian.com/...people/...?cloudId=<span style="color: #34d399; font-weight: bold;">11223344-5566-7788-9900-aabbccddeeff</span></code>
+                        <li style="margin-bottom: 4px;">Xem trực tiếp tại đường dẫn (URL) trang Profile cá nhân của bạn
+                            ở Bước 2. Nó có chứa thuộc tính <code>cloudId</code> ở ngay cuối:<br>
+                            <code
+                                style="background: rgba(255,255,255,0.05); color: #a78bfa; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; font-family: monospace; word-break: break-all; font-size: 11px;">https://home.atlassian.com/...people/...?cloudId=<span style="color: #34d399; font-weight: bold;">11223344-5566-7788-9900-aabbccddeeff</span></code>
                         </li>
-                        <li style="margin-bottom: 4px;">Sao chép chuỗi mã UUID ở phía sau dấu <code>cloudId=</code> ở cuối URL và dán vào ô <strong>Cloud ID</strong>.</li>
-                        <li style="margin-bottom: 4px;"><em>Cách dự phòng:</em> Mở tab mới, truy cập đường dẫn sau khi đã đăng nhập Jira: <code>https://&lt;tên_công_ty&gt;.atlassian.net/_edge/gira/profiles</code> rồi sao chép mã <code>"id"</code> từ kết quả hiển thị.</li>
+                        <li style="margin-bottom: 4px;">Sao chép chuỗi mã UUID ở phía sau dấu <code>cloudId=</code> ở
+                            cuối URL và dán vào ô <strong>Cloud ID</strong>.</li>
+                        <li style="margin-bottom: 4px;"><em>Cách dự phòng:</em> Mở tab mới, truy cập đường dẫn sau khi
+                            đã đăng nhập Jira:
+                            <code>https://&lt;tên_công_ty&gt;.atlassian.net/_edge/gira/profiles</code> rồi sao chép mã
+                            <code>"id"</code> từ kết quả hiển thị.</li>
                     </ol>
                 </div>
 
                 <!-- Step 4 -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
-                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div
+                        style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
                         <span>4️⃣</span> Jira Base URL
                     </div>
                     <ul style="margin: 0; padding-left: 20px; list-style-type: disc; color: var(--muted);">
                         <li>Đường dẫn chính dùng để truy cập vào Jira của bạn.</li>
-                        <li>Định dạng chuẩn: <code>https://&lt;tên_công_ty&gt;.atlassian.net</code> (lưu ý: không thêm dấu gạch chéo <code>/</code> ở cuối).</li>
+                        <li>Định dạng chuẩn: <code>https://&lt;tên_công_ty&gt;.atlassian.net</code> (lưu ý: không thêm
+                            dấu gạch chéo <code>/</code> ở cuối).</li>
                     </ul>
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+            <div
+                style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
                 <button class="btn btn-primary" type="button" onclick="closeJiraGuideModal()">Tôi đã hiểu</button>
             </div>
         </div>
@@ -1450,7 +1519,8 @@
                 <button class="btn btn-ghost" id="btn-users-mgmt" onclick="openUsersMgmtModal()" style="display: none;">
                     👥 Quản lý Users
                 </button>
-                <button class="btn btn-ghost" id="btn-profile" onclick="openProfileModal()" style="border-color: rgba(139,92,246,0.3); color: #a78bfa; background: rgba(139,92,246,0.08);">
+                <button class="btn btn-ghost" id="btn-profile" onclick="openProfileModal()"
+                    style="border-color: rgba(139,92,246,0.3); color: #a78bfa; background: rgba(139,92,246,0.08);">
                     ⚙️ Cài đặt
                 </button>
                 <button class="btn btn-ghost" onclick="openModal()" id="btn-add-month">
@@ -1468,7 +1538,8 @@
                     <span class="btn-icon" id="refresh-icon">🔄</span>
                     <span id="refresh-label">Cập nhật</span>
                 </button>
-                <button class="btn btn-ghost" id="btn-logout" onclick="logout()" style="border-color: rgba(244, 63, 94, 0.25); color: #fb7185; background: rgba(244, 63, 94, 0.05);">
+                <button class="btn btn-ghost" id="btn-logout" onclick="logout()"
+                    style="border-color: rgba(244, 63, 94, 0.25); color: #fb7185; background: rgba(244, 63, 94, 0.05);">
                     🚪 Đăng xuất
                 </button>
             </div>
@@ -1620,7 +1691,7 @@
                 <span class="footer-pill">☀️ T7: 4h/ngày (sáng)</span>
                 <span class="footer-pill">💤 CN: Nghỉ</span>
             </div>
-            <div>JiraBot Time Tracker · Quân Hoàng</div>
+            <div>JiraBot Time Tracker</div>
         </div>
     </div>
 
@@ -1750,10 +1821,10 @@
                 }
                 const meData = await meRes.json();
                 currentUser = meData.user;
-                
+
                 // Update user details in header
                 document.getElementById('user-info-text').textContent = `${currentUser.full_name} ${currentUser.job_title ? `(${currentUser.job_title})` : ''} · ${currentUser.email}`;
-                
+
                 // Show Users Mgmt button only if Admin
                 if (currentUser.role === 'admin') {
                     document.getElementById('btn-users-mgmt').style.display = 'inline-flex';
@@ -1993,7 +2064,7 @@
                     ]
                 });
 
-                                // ── Page header ───────────────────────────────────────────────────
+                // ── Page header ───────────────────────────────────────────────────
                 const mkHeader = () => new Header({
                     children: [
                         new Table({
@@ -2190,7 +2261,7 @@
                                     { alignment: AlignmentType.CENTER, spacing: { before: 200, after: 60 } }),
                                 P([RB(`THÁNG ${m}/${y}`, { size: 26 })],
                                     { alignment: AlignmentType.CENTER, spacing: { before: 0, after: 300 } }),
-                                P([RB('Họ & tên: '), R(currentUser ? currentUser.full_name : 'Hoàng Bình Quân')]),
+                                P([RB('Họ & tên: '), R(currentUser ? currentUser.full_name : 'Nguyễn Văn A')]),
                                 P([RB('Chức danh: '), R(currentUser && currentUser.job_title ? currentUser.job_title : 'Nhân viên')]),
                                 P([RB('Bộ phận: '), R(currentUser ? currentUser.department : 'Acorneri IT')], { spacing: { before: 60, after: 240 } }),
                                 P([R('')]),
@@ -2251,16 +2322,16 @@
                 const blob = await Packer.toBlob(doc);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                
+
                 const userName = (currentUser && currentUser.full_name) ? currentUser.full_name.trim() : 'User';
                 const now = new Date();
                 const dd = String(now.getDate()).padStart(2, '0');
                 const mm = String(now.getMonth() + 1).padStart(2, '0');
                 const yyyy = now.getFullYear();
                 const exportDate = `${dd}${mm}${yyyy}`;
-                
-                a.href = url; 
-                a.download = `${userName}_BCCV_T${m}_${exportDate}.docx`; 
+
+                a.href = url;
+                a.download = `${userName}_BCCV_T${m}_${exportDate}.docx`;
                 a.click();
                 URL.revokeObjectURL(url);
                 showToast(`✅ Xuất báo cáo tháng thành công! ${data.tasks.length} tasks`, 'success');
@@ -3414,7 +3485,7 @@
                 if (!res.ok) throw new Error(data.error || 'Lỗi khi lưu thông tin người dùng.');
 
                 showToast(`✅ ${id ? 'Cập nhật' : 'Thêm mới'} người dùng thành công!`, 'success');
-                
+
                 // If editing currently logged-in user, refresh header/app state
                 if (id && parseInt(id) === currentUser.id) {
                     await init();
@@ -3470,7 +3541,7 @@
                 document.getElementById('profile-accountid').value = me.account_id || '';
                 document.getElementById('profile-cloudid').value = me.cloud_id || '';
                 document.getElementById('profile-baseurl').value = me.base_url || '';
-            }).catch(() => {});
+            }).catch(() => { });
             document.getElementById('profile-modal').classList.add('active');
             updateBodyScrollLock();
         }
