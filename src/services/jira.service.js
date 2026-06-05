@@ -118,7 +118,7 @@ async function refreshMonthData(user, yearMonth) {
     const t0 = Date.now();
 
     // ── Run 4 queries in parallel ──────────────────────────────────────
-    const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10009,customfield_10124,resolutiondate';
+    const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10008,customfield_10009,customfield_10124,resolutiondate';
     const DONE_FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124,labels,duedate,customfield_10015,customfield_10128,customfield_10123,customfield_10016,customfield_10035,parent,created';
 
     const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
@@ -159,6 +159,13 @@ async function refreshMonthData(user, yearMonth) {
     const getStartDate = (fields) => fields.customfield_10015 || fields.customfield_10128 || fields.customfield_10123 || null;
     const getStoryPoints = (fields) => fields.customfield_10016 !== null && fields.customfield_10016 !== undefined ? fields.customfield_10016 : (fields.customfield_10035 !== null && fields.customfield_10035 !== undefined ? fields.customfield_10035 : null);
 
+    const getLocalDateStr = (dateVal) => {
+        if (!dateVal) return null;
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return null;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
     // Helper to map Sunday/weekend logs to closest working day in the month
     const mapToWorkingDay = (dateStr) => {
         if (workingDaysSet.has(dateStr)) return dateStr;
@@ -189,43 +196,14 @@ async function refreshMonthData(user, yearMonth) {
     };
 
     const getIssueSecondsForMonth = (issue) => {
+        const actualStart = getActualStart(issue.fields);
         const actualEnd = getActualEnd(issue.fields);
         const wls = issue.fields.worklog?.worklogs || [];
         let totalSec = 0;
         wls.forEach(wl => {
             if (wl.author.accountId !== user.account_id) return;
             
-            let targetDateStr;
-            if (actualEnd) {
-                const wlDate = new Date(wl.started);
-                const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
-                
-                const aeDate = new Date(actualEnd);
-                const aeMonthStr = `${aeDate.getFullYear()}-${pad(aeDate.getMonth() + 1)}`;
-                const wlMonthStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}`;
-                
-                if (wlMonthStr === aeMonthStr) {
-                    targetDateStr = logDate;
-                } else {
-                    let targetDate = new Date(actualEnd);
-                    if (targetDate.getDay() === 0) {
-                        const prevDay = new Date(targetDate);
-                        prevDay.setDate(targetDate.getDate() - 1);
-                        if (prevDay.getMonth() === targetDate.getMonth()) {
-                            targetDate = prevDay;
-                        } else {
-                            const nextDay = new Date(targetDate);
-                            nextDay.setDate(targetDate.getDate() + 1);
-                            targetDate = nextDay;
-                        }
-                    }
-                    targetDateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
-                }
-            } else {
-                const wlDate = new Date(wl.started);
-                targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
-            }
-
+            const targetDateStr = getLocalDateStr(actualEnd) || getLocalDateStr(actualStart) || getLocalDateStr(wl.started);
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
                 if (workingDaysSet.has(mappedDateStr)) {
@@ -239,42 +217,13 @@ async function refreshMonthData(user, yearMonth) {
     wlIssues.forEach(issue => {
         if (issue.fields.issuetype.subtask !== true) return; // Only process subtasks!
 
+        const actualStart = getActualStart(issue.fields);
         const actualEnd = getActualEnd(issue.fields);
         const wls = issue.fields.worklog?.worklogs || [];
         wls.forEach(wl => {
             if (wl.author.accountId !== user.account_id) return;
             
-            let targetDateStr;
-            if (actualEnd) {
-                const wlDate = new Date(wl.started);
-                const logDate = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
-                
-                const aeDate = new Date(actualEnd);
-                const aeMonthStr = `${aeDate.getFullYear()}-${pad(aeDate.getMonth() + 1)}`;
-                const wlMonthStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}`;
-                
-                if (wlMonthStr === aeMonthStr) {
-                    targetDateStr = logDate;
-                } else {
-                    let targetDate = new Date(actualEnd);
-                    if (targetDate.getDay() === 0) {
-                        const prevDay = new Date(targetDate);
-                        prevDay.setDate(targetDate.getDate() - 1);
-                        if (prevDay.getMonth() === targetDate.getMonth()) {
-                            targetDate = prevDay;
-                        } else {
-                            const nextDay = new Date(targetDate);
-                            nextDay.setDate(targetDate.getDate() + 1);
-                            targetDate = nextDay;
-                        }
-                    }
-                    targetDateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
-                }
-            } else {
-                const wlDate = new Date(wl.started);
-                targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
-            }
-
+            const targetDateStr = getLocalDateStr(actualEnd) || getLocalDateStr(actualStart) || getLocalDateStr(wl.started);
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
                 if (dailySecMap[mappedDateStr] !== undefined) {
