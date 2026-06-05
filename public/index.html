@@ -1039,6 +1039,10 @@
                 align-items: flex-start;
             }
         }
+
+        body.modal-open {
+            overflow: hidden;
+        }
     </style>
 </head>
 
@@ -1323,7 +1327,12 @@
 
                 <!-- Kết nối Jira -->
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                    <div style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">🔗 Kết nối Jira</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="font-size: 12px; font-weight: 600; color: var(--purple-l); text-transform: uppercase; letter-spacing: 0.06em;">🔗 Kết nối Jira</div>
+                        <button type="button" class="btn btn-ghost" onclick="openJiraGuideModal()" style="font-size: 11px; padding: 4px 10px; height: auto; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); border-radius: 6px; cursor: pointer; color: var(--purple-l);">
+                            💡 Hướng dẫn
+                        </button>
+                    </div>
                     <div style="font-size: 11px; color: var(--muted); margin-bottom: 12px;">Lấy thông tin tại <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color: var(--purple-l);">Atlassian API Tokens</a></div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div class="form-row" style="margin-bottom: 0;">
@@ -1356,6 +1365,74 @@
                     <button class="btn btn-primary" type="submit" id="btn-save-profile">💾 Lưu thay đổi</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ── Modal: Hướng dẫn cấu hình Jira ── -->
+    <div class="modal-overlay" id="jira-guide-modal" style="z-index: 1010;">
+        <div class="modal" style="width: 580px; max-height: 90vh; overflow-y: auto; background: #141722; border: 1px solid var(--border-2); border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px;">
+                <div class="modal-title" style="margin: 0; font-size: 16px; font-weight: 800;">💡 Hướng dẫn cấu hình kết nối Jira</div>
+                <button type="button" class="btn btn-ghost" onclick="closeJiraGuideModal()" style="padding: 4px 8px; font-size: 18px; line-height: 1; height: auto; border: none; background: transparent; cursor: pointer; color: var(--muted);">&times;</button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 12px; line-height: 1.6; color: var(--text-normal, #e2e8f0);">
+                <!-- Step 1 -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                        <span>1️⃣</span> Lấy Jira API Token
+                    </div>
+                    <ol style="margin: 0; padding-left: 20px; color: var(--muted);">
+                        <li style="margin-bottom: 4px;">Truy cập trang quản lý mã của Atlassian: <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color: var(--purple-l); text-decoration: underline;">Atlassian API Tokens</a>.</li>
+                        <li style="margin-bottom: 4px;">Nhấn nút <strong>Create API token</strong>.</li>
+                        <li style="margin-bottom: 4px;">Nhập nhãn tùy ý (ví dụ: <code>JiraBot</code>) rồi nhấn <strong>Create</strong>.</li>
+                        <li style="margin-bottom: 4px;">Sao chép mã API Token hiển thị (lưu ý: mã này chỉ xuất hiện 1 lần duy nhất) và dán vào ô <strong>Jira API Token</strong>.</li>
+                    </ol>
+                </div>
+
+                <!-- Step 2 -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                        <span>2️⃣</span> Lấy Account ID
+                    </div>
+                    <ol style="margin: 0; padding-left: 20px; color: var(--muted);">
+                        <li style="margin-bottom: 4px;">Truy cập trang cá nhân của bạn bằng cách click vào ảnh đại diện ở góc trên bên phải, chọn <strong>Profile</strong> (hoặc chọn <strong>People</strong> trên thanh menu bên trái và nhấp vào chính mình).</li>
+                        <li style="margin-bottom: 4px;">Xem đường dẫn (URL) trên thanh địa chỉ trình duyệt. URL lúc này sẽ hiển thị định dạng:<br>
+                            <code style="background: rgba(255,255,255,0.05); color: #a78bfa; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; font-family: monospace; word-break: break-all; font-size: 11px;">https://home.atlassian.com/o/.../people/<span style="color: #34d399; font-weight: bold;">712020:a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6</span>?cloudId=...</code>
+                        </li>
+                        <li style="margin-bottom: 4px;">Sao chép chuỗi mã nằm sau chữ <code>/people/</code> và đứng trước dấu hỏi chấm <code>?</code> rồi dán vào ô <strong>Account ID</strong>.</li>
+                    </ol>
+                </div>
+
+                <!-- Step 3 -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                        <span>3️⃣</span> Lấy Cloud ID
+                    </div>
+                    <ol style="margin: 0; padding-left: 20px; color: var(--muted);">
+                        <li style="margin-bottom: 4px;">Xem trực tiếp tại đường dẫn (URL) trang Profile cá nhân của bạn ở Bước 2. Nó có chứa thuộc tính <code>cloudId</code> ở ngay cuối:<br>
+                            <code style="background: rgba(255,255,255,0.05); color: #a78bfa; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; font-family: monospace; word-break: break-all; font-size: 11px;">https://home.atlassian.com/...people/...?cloudId=<span style="color: #34d399; font-weight: bold;">11223344-5566-7788-9900-aabbccddeeff</span></code>
+                        </li>
+                        <li style="margin-bottom: 4px;">Sao chép chuỗi mã UUID ở phía sau dấu <code>cloudId=</code> ở cuối URL và dán vào ô <strong>Cloud ID</strong>.</li>
+                        <li style="margin-bottom: 4px;"><em>Cách dự phòng:</em> Mở tab mới, truy cập đường dẫn sau khi đã đăng nhập Jira: <code>https://&lt;tên_công_ty&gt;.atlassian.net/_edge/gira/profiles</code> rồi sao chép mã <code>"id"</code> từ kết quả hiển thị.</li>
+                    </ol>
+                </div>
+
+                <!-- Step 4 -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px;">
+                    <div style="font-weight: 600; color: var(--purple-l); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                        <span>4️⃣</span> Jira Base URL
+                    </div>
+                    <ul style="margin: 0; padding-left: 20px; list-style-type: disc; color: var(--muted);">
+                        <li>Đường dẫn chính dùng để truy cập vào Jira của bạn.</li>
+                        <li>Định dạng chuẩn: <code>https://&lt;tên_công_ty&gt;.atlassian.net</code> (lưu ý: không thêm dấu gạch chéo <code>/</code> ở cuối).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                <button class="btn btn-primary" type="button" onclick="closeJiraGuideModal()">Tôi đã hiểu</button>
+            </div>
         </div>
     </div>
 
@@ -3403,10 +3480,31 @@
                 document.getElementById('profile-baseurl').value = me.base_url || '';
             }).catch(() => {});
             document.getElementById('profile-modal').classList.add('active');
+            updateBodyScrollLock();
         }
 
         function closeProfileModal() {
             document.getElementById('profile-modal').classList.remove('active');
+            updateBodyScrollLock();
+        }
+
+        function openJiraGuideModal() {
+            document.getElementById('jira-guide-modal').classList.add('active');
+            updateBodyScrollLock();
+        }
+
+        function closeJiraGuideModal() {
+            document.getElementById('jira-guide-modal').classList.remove('active');
+            updateBodyScrollLock();
+        }
+
+        function updateBodyScrollLock() {
+            const activeModal = document.querySelector('.modal-overlay.active');
+            if (activeModal) {
+                document.body.classList.add('modal-open');
+            } else {
+                document.body.classList.remove('modal-open');
+            }
         }
 
         async function submitProfileForm(e) {
