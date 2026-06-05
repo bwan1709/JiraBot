@@ -18,6 +18,7 @@ RUN npm ci --omit=dev
 
 # Copy source code
 COPY server.js ./
+COPY src/ ./src/
 COPY public/ ./public/
 
 # Create data directory for SQLite
