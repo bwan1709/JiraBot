@@ -802,8 +802,8 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         const t0 = Date.now();
 
         // ── Chạy song song 4 queries ──────────────────────────────────────
-        const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10009,resolutiondate';
-        const DONE_FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,labels,duedate,customfield_10015,customfield_10016,parent,created';
+        const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10009,customfield_10124,resolutiondate';
+        const DONE_FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124,labels,duedate,customfield_10015,customfield_10128,customfield_10123,customfield_10016,customfield_10035,parent,created';
 
         const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
             searchAll(
@@ -836,8 +836,44 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
         wdList.forEach(d => { dailySecMap[d.date] = 0; });
 
         const workingDaysSet = new Set(wdList.map(d => d.date));
+
+        // Helpers for project-specific custom fields
+        const getActualStart = (fields) => fields.customfield_10008 || null;
+        const getActualEnd = (fields) => fields.customfield_10009 || fields.customfield_10124 || fields.resolutiondate || null;
+        const getStartDate = (fields) => fields.customfield_10015 || fields.customfield_10128 || fields.customfield_10123 || null;
+        const getStoryPoints = (fields) => fields.customfield_10016 !== null && fields.customfield_10016 !== undefined ? fields.customfield_10016 : (fields.customfield_10035 !== null && fields.customfield_10035 !== undefined ? fields.customfield_10035 : null);
+
+        // Helper to map Sunday/weekend logs to closest working day in the month
+        const mapToWorkingDay = (dateStr) => {
+            if (workingDaysSet.has(dateStr)) return dateStr;
+            const d = new Date(dateStr);
+            
+            // Try next day
+            const next = new Date(d);
+            next.setDate(d.getDate() + 1);
+            const nextStr = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+            if (nextStr >= startDate && nextStr <= endDate && workingDaysSet.has(nextStr)) {
+                return nextStr;
+            }
+            
+            // Try previous day
+            const prev = new Date(d);
+            prev.setDate(d.getDate() - 1);
+            const prevStr = `${prev.getFullYear()}-${pad(prev.getMonth() + 1)}-${pad(prev.getDate())}`;
+            if (prevStr >= startDate && prevStr <= endDate && workingDaysSet.has(prevStr)) {
+                return prevStr;
+            }
+            
+            const sortedDays = Array.from(workingDaysSet).sort();
+            if (sortedDays.length > 0) {
+                if (dateStr < sortedDays[0]) return sortedDays[0];
+                if (dateStr > sortedDays[sortedDays.length - 1]) return sortedDays[sortedDays.length - 1];
+            }
+            return dateStr;
+        };
+
         const getIssueSecondsForMonth = (issue) => {
-            const actualEnd = issue.fields.customfield_10009 || issue.fields.resolutiondate || null;
+            const actualEnd = getActualEnd(issue.fields);
             const wls = issue.fields.worklog?.worklogs || [];
             let totalSec = 0;
             wls.forEach(wl => {
@@ -874,15 +910,20 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                     targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
                 }
 
-                if (targetDateStr >= startDate && targetDateStr <= endDate && workingDaysSet.has(targetDateStr)) {
-                    totalSec += wl.timeSpentSeconds;
+                if (targetDateStr >= startDate && targetDateStr <= endDate) {
+                    const mappedDateStr = mapToWorkingDay(targetDateStr);
+                    if (workingDaysSet.has(mappedDateStr)) {
+                        totalSec += wl.timeSpentSeconds;
+                    }
                 }
             });
             return totalSec;
         };
 
         wlIssues.forEach(issue => {
-            const actualEnd = issue.fields.customfield_10009 || issue.fields.resolutiondate || null;
+            if (issue.fields.issuetype.subtask !== true) return; // Only process subtasks!
+
+            const actualEnd = getActualEnd(issue.fields);
             const wls = issue.fields.worklog?.worklogs || [];
             wls.forEach(wl => {
                 if (wl.author.accountId !== req.user.account_id) return;
@@ -923,14 +964,17 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                     targetDateStr = `${wlDate.getFullYear()}-${pad(wlDate.getMonth() + 1)}-${pad(wlDate.getDate())}`;
                 }
 
-                if (targetDateStr >= startDate && targetDateStr <= endDate && dailySecMap[targetDateStr] !== undefined) {
-                     dailySecMap[targetDateStr] += wl.timeSpentSeconds;
+                if (targetDateStr >= startDate && targetDateStr <= endDate) {
+                    const mappedDateStr = mapToWorkingDay(targetDateStr);
+                    if (dailySecMap[mappedDateStr] !== undefined) {
+                         dailySecMap[mappedDateStr] += wl.timeSpentSeconds;
+                    }
                 }
             });
         });
 
         // ── Process done tasks ─────────────────────────────────────────────
-        const tasks = doneIssues.map(issue => {
+        const tasks = doneIssues.filter(issue => issue.fields.issuetype.subtask === true).map(issue => {
             const allWls = issue.fields.worklog?.worklogs || [];
             const userWls = allWls.filter(w => w.author.accountId === req.user.account_id);
             const totalSec = getIssueSecondsForMonth(issue);
@@ -941,12 +985,12 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
             }
 
             const originalEstimate = issue.fields.timeoriginalestimate || null;
-            const actualStart = issue.fields.customfield_10008 || null;
-            const actualEnd = issue.fields.customfield_10009 || null;
+            const actualStart = getActualStart(issue.fields);
+            const actualEnd = getActualEnd(issue.fields);
             const labels = issue.fields.labels || [];
             const duedate = issue.fields.duedate || null;
-            const startDateField = issue.fields.customfield_10015 || null;
-            const storyPoints = issue.fields.customfield_10016 || null;
+            const startDateField = getStartDate(issue.fields);
+            const storyPoints = getStoryPoints(issue.fields);
             const parentKey = issue.fields.parent ? issue.fields.parent.key : null;
 
             const missingFields = [];
@@ -987,6 +1031,7 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
 
         // ── Process in-progress tasks ──────────────────────────────────────
         const inProgressTasks = inProgressIssues.filter(issue => {
+            if (issue.fields.issuetype.subtask !== true) return false;
             const created = issue.fields.created;
             if (!created) return false;
             return created.substring(0, 7) === req.params.yearMonth;
@@ -1007,12 +1052,12 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 has_worklog: totalSec > 0,
                 url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: issue.fields.timeoriginalestimate || null,
-                actual_start: issue.fields.customfield_10008 || null,
-                actual_end: issue.fields.customfield_10009 || null,
+                actual_start: getActualStart(issue.fields),
+                actual_end: getActualEnd(issue.fields),
                 labels: issue.fields.labels || [],
                 duedate: issue.fields.duedate || null,
-                start_date: issue.fields.customfield_10015 || null,
-                story_points: issue.fields.customfield_10016 || null,
+                start_date: getStartDate(issue.fields),
+                story_points: getStoryPoints(issue.fields),
                 parent_key: issue.fields.parent ? issue.fields.parent.key : null,
                 created: issue.fields.created
             };
@@ -1044,12 +1089,12 @@ app.post('/api/refresh/:yearMonth', async (req, res) => {
                 has_worklog: totalSec > 0,
                 url: `${req.user.base_url}/browse/${issue.key}`,
                 original_estimate: issue.fields.timeoriginalestimate || null,
-                actual_start: issue.fields.customfield_10008 || null,
-                actual_end: issue.fields.customfield_10009 || null,
+                actual_start: getActualStart(issue.fields),
+                actual_end: getActualEnd(issue.fields),
                 labels: issue.fields.labels || [],
                 duedate: issue.fields.duedate || null,
-                start_date: issue.fields.customfield_10015 || null,
-                story_points: issue.fields.customfield_10016 || null,
+                start_date: getStartDate(issue.fields),
+                story_points: getStoryPoints(issue.fields),
                 parent_key: issue.fields.parent ? issue.fields.parent.key : null,
                 created: issue.fields.created
             };
@@ -1174,12 +1219,36 @@ app.post('/api/issue/:issueKey/update-fields', async (req, res) => {
         }
         if (parentKey !== undefined && parentKey) fields.parent = { key: parentKey.trim() };
         if (duedate !== undefined) fields.duedate = duedate || null;
-        if (startDate !== undefined) fields.customfield_10015 = startDate || null;
-        if (storyPoints !== undefined) {
-            fields.customfield_10016 = storyPoints !== null && storyPoints !== '' ? parseFloat(storyPoints) : null;
+
+        // Fetch dynamic custom field keys using editmeta
+        const editmeta = await jiraGet(req.user, `/issue/${issueKey}/editmeta`);
+        const fieldMap = {
+            actualStart: 'customfield_10008',
+            actualEnd: 'customfield_10009',
+            startDate: 'customfield_10015',
+            storyPoints: 'customfield_10016'
+        };
+        if (editmeta && editmeta.fields) {
+            for (const [key, field] of Object.entries(editmeta.fields)) {
+                const nameLower = (field.name || '').toLowerCase();
+                if (nameLower === 'actual start') {
+                    fieldMap.actualStart = key;
+                } else if (nameLower === 'actual end') {
+                    fieldMap.actualEnd = key;
+                } else if (nameLower === 'start date') {
+                    fieldMap.startDate = key;
+                } else if (nameLower === 'story point estimate' || nameLower === 'story points') {
+                    fieldMap.storyPoints = key;
+                }
+            }
         }
-        if (actualStart !== undefined) fields.customfield_10008 = actualStart || null;
-        if (actualEnd !== undefined) fields.customfield_10009 = actualEnd || null;
+
+        if (startDate !== undefined) fields[fieldMap.startDate] = startDate || null;
+        if (storyPoints !== undefined) {
+            fields[fieldMap.storyPoints] = storyPoints !== null && storyPoints !== '' ? parseFloat(storyPoints) : null;
+        }
+        if (actualStart !== undefined) fields[fieldMap.actualStart] = actualStart || null;
+        if (actualEnd !== undefined) fields[fieldMap.actualEnd] = actualEnd || null;
 
         console.log(`📡 Đang cập nhật fields cho task ${issueKey}:`, fields);
         await jiraPut(req.user, `/issue/${issueKey}`, { fields });

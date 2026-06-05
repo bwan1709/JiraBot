@@ -1713,6 +1713,10 @@
                     return;
                 }
                 const data = await res.json();
+                // Tránh re-render khi dữ liệu không thay đổi
+                if (currentData && currentData.year_month === data.year_month && currentData.last_updated === data.last_updated) {
+                    return;
+                }
                 render(data);
             } catch (e) {
                 showEmptyState('Lỗi tải dữ liệu', e.message);
@@ -2347,9 +2351,6 @@
             const todayIdx = wds.reduce((acc, d, idx) => d.date <= today ? idx : acc, -1);
             const pastDays = wds.slice(0, todayIdx + 1);
 
-            // Destroy old charts
-            Object.values(charts).forEach(c => c && c.destroy());
-
             // ── Daily bar chart ──
             // Palette
             const TEAL_A = 'rgba(20,184,166,0.82)';
@@ -2407,87 +2408,100 @@
             const maxY = Math.max(20, ...wds.map(d => Math.max(d.logged, d.standard))) + 2;
             const stdLine = wds.map(d => d.standard);
 
-            charts.daily = new Chart(dailyCtx, {
-                type: 'bar',
-                data: {
-                    labels: wds.map(d => d.day_label),
-                    datasets: [
-                        {
-                            label: 'Đã log (trong chuẩn)',
-                            data: baseData,
-                            backgroundColor: baseColors,
-                            borderColor: baseBorders,
-                            borderWidth: 1.5,
-                            borderRadius: 4,
-                            borderSkipped: false,
-                            barPercentage: 0.72,
-                            categoryPercentage: 0.85,
-                            stack: 'daily',
-                            order: 1,
-                        },
-                        {
-                            label: 'Vượt chuẩn',
-                            data: excessData,
-                            backgroundColor: excessPattern,
-                            borderColor: '#2563eb',
-                            borderWidth: 1.5,
-                            borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-                            borderSkipped: 'bottom',
-                            barPercentage: 0.72,
-                            categoryPercentage: 0.85,
-                            stack: 'daily',
-                            order: 1,
-                        },
-                        {
-                            label: 'Mức chuẩn',
-                            data: stdLine,
-                            type: 'line',
-                            borderColor: 'rgba(99,102,241,0.6)',
-                            borderWidth: 1.5,
-                            borderDash: [5, 3],
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            fill: false,
-                            tension: 0,
-                            order: 2,
-                            yAxisID: 'y',
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: true,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: C.tick, font: { size: 10 }, boxWidth: 10, padding: 14,
-                                filter: item => item.text !== 'Mức chuẩn'
+            if (charts.daily) {
+                charts.daily.data.labels = wds.map(d => d.day_label);
+                charts.daily.data.datasets[0].data = baseData;
+                charts.daily.data.datasets[0].backgroundColor = baseColors;
+                charts.daily.data.datasets[0].borderColor = baseBorders;
+                charts.daily.data.datasets[1].data = excessData;
+                charts.daily.data.datasets[1].backgroundColor = excessPattern;
+                charts.daily.data.datasets[2].data = stdLine;
+                charts.daily.options.scales.y.max = maxY;
+                charts.daily.update('none');
+            } else {
+                charts.daily = new Chart(dailyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: wds.map(d => d.day_label),
+                        datasets: [
+                            {
+                                label: 'Đã log (trong chuẩn)',
+                                data: baseData,
+                                backgroundColor: baseColors,
+                                borderColor: baseBorders,
+                                borderWidth: 1.5,
+                                borderRadius: 4,
+                                borderSkipped: false,
+                                barPercentage: 0.72,
+                                categoryPercentage: 0.85,
+                                stack: 'daily',
+                                order: 1,
+                            },
+                            {
+                                label: 'Vượt chuẩn',
+                                data: excessData,
+                                backgroundColor: excessPattern,
+                                borderColor: '#2563eb',
+                                borderWidth: 1.5,
+                                borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                                borderSkipped: 'bottom',
+                                barPercentage: 0.72,
+                                categoryPercentage: 0.85,
+                                stack: 'daily',
+                                order: 1,
+                            },
+                            {
+                                label: 'Mức chuẩn',
+                                data: stdLine,
+                                type: 'line',
+                                borderColor: 'rgba(99,102,241,0.6)',
+                                borderWidth: 1.5,
+                                borderDash: [5, 3],
+                                pointRadius: 0,
+                                pointHoverRadius: 4,
+                                fill: false,
+                                tension: 0,
+                                order: 2,
+                                yAxisID: 'y',
                             }
-                        },
-                        tooltip: {
-                            ...tooltipBase,
-                            callbacks: {
-                                label: ctx => {
-                                    if (ctx.dataset.label === 'Mức chuẩn') return `  Chuẩn: ${ctx.raw}h`;
-                                    if (ctx.dataset.label === 'Vượt chuẩn') return ctx.raw > 0 ? `  📘 Vượt: +${fmtH(ctx.raw)}` : null;
-                                    if (ctx.raw === null) return null;
-                                    return `  Đã log: ${fmtH(ctx.raw)}`;
-                                },
-                                afterBody: items => {
-                                    const i = items[0].dataIndex;
-                                    if (i > todayIdx) return ['→ Ngày tương lai'];
-                                    const d = wds[i];
-                                    const diff = d.logged - d.standard;
-                                    if (diff > 0) return [`✅ Tổng: ${fmtH(d.logged)} (↑${fmtH(diff)} chuẩn)`, `  Chuẩn: ${d.standard}h`];
-                                    if (diff < 0) return [`⚠️ Thiếu: ${fmtH(Math.abs(diff))}`, `  Cần: ${d.standard}h | Đã: ${fmtH(d.logged)}`];
-                                    return ['✅ Đạt chuẩn'];
+                        ]
+                    },
+                    options: {
+                        animation: false,
+                        responsive: true, maintainAspectRatio: true,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: C.tick, font: { size: 10 }, boxWidth: 10, padding: 14,
+                                    filter: item => item.text !== 'Mức chuẩn'
+                                }
+                            },
+                            tooltip: {
+                                ...tooltipBase,
+                                callbacks: {
+                                    label: ctx => {
+                                        if (ctx.dataset.label === 'Mức chuẩn') return `  Chuẩn: ${ctx.raw}h`;
+                                        if (ctx.dataset.label === 'Vượt chuẩn') return ctx.raw > 0 ? `  📘 Vượt: +${fmtH(ctx.raw)}` : null;
+                                        if (ctx.raw === null) return null;
+                                        return `  Đã log: ${fmtH(ctx.raw)}`;
+                                    },
+                                    afterBody: items => {
+                                        const i = items[0].dataIndex;
+                                        if (i > todayIdx) return ['→ Ngày tương lai'];
+                                        const d = wds[i];
+                                        const diff = d.logged - d.standard;
+                                        if (diff > 0) return [`✅ Tổng: ${fmtH(d.logged)} (↑${fmtH(diff)} chuẩn)`, `  Chuẩn: ${d.standard}h`];
+                                        if (diff < 0) return [`⚠️ Thiếu: ${fmtH(Math.abs(diff))}`, `  Cần: ${d.standard}h | Đã: ${fmtH(d.logged)}`];
+                                        return ['✅ Đạt chuẩn'];
+                                    }
                                 }
                             }
-                        }
-                    },
-                    scales: { ...scalesBase, y: { ...scalesBase.y, min: 0, max: maxY } }
-                }
-            });
+                        },
+                        scales: { ...scalesBase, y: { ...scalesBase.y, min: 0, max: maxY } }
+                    }
+                });
+            }
 
             // ── Cumulative line chart ──
             let cumStd = 0, cumLog = 0;
@@ -2498,34 +2512,42 @@
                 cumLogData.push(Math.round(cumLog * 100) / 100);
             });
 
-            charts.cumul = new Chart(document.getElementById('chart-cumulative').getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: pastDays.map(d => d.day_label),
-                    datasets: [
-                        {
-                            label: 'Cần đạt', data: cumStdData,
-                            borderColor: 'rgba(99,102,241,0.7)', backgroundColor: 'rgba(99,102,241,0.04)',
-                            fill: true, borderDash: [5, 3], tension: 0.3, borderWidth: 2,
-                            pointRadius: 3, pointBackgroundColor: C.indigo, pointBorderColor: '#0b0d14', pointBorderWidth: 2,
-                        },
-                        {
-                            label: 'Đã log', data: cumLogData,
-                            borderColor: C.green, backgroundColor: 'rgba(16,185,129,0.06)',
-                            fill: true, tension: 0.3, borderWidth: 2.5,
-                            pointRadius: 3, pointBackgroundColor: C.green, pointBorderColor: '#0b0d14', pointBorderWidth: 2,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { labels: { color: C.tick, font: { size: 10 }, boxWidth: 10 } },
-                        tooltip: tooltipBase
+            if (charts.cumul) {
+                charts.cumul.data.labels = pastDays.map(d => d.day_label);
+                charts.cumul.data.datasets[0].data = cumStdData;
+                charts.cumul.data.datasets[1].data = cumLogData;
+                charts.cumul.update('none');
+            } else {
+                charts.cumul = new Chart(document.getElementById('chart-cumulative').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: pastDays.map(d => d.day_label),
+                        datasets: [
+                            {
+                                label: 'Cần đạt', data: cumStdData,
+                                borderColor: 'rgba(99,102,241,0.7)', backgroundColor: 'rgba(99,102,241,0.04)',
+                                fill: true, borderDash: [5, 3], tension: 0.3, borderWidth: 2,
+                                pointRadius: 3, pointBackgroundColor: C.indigo, pointBorderColor: '#0b0d14', pointBorderWidth: 2,
+                            },
+                            {
+                                label: 'Đã log', data: cumLogData,
+                                borderColor: C.green, backgroundColor: 'rgba(16,185,129,0.06)',
+                                fill: true, tension: 0.3, borderWidth: 2.5,
+                                pointRadius: 3, pointBackgroundColor: C.green, pointBorderColor: '#0b0d14', pointBorderWidth: 2,
+                            }
+                        ]
                     },
-                    scales: scalesBase
-                }
-            });
+                    options: {
+                        animation: false,
+                        responsive: true,
+                        plugins: {
+                            legend: { labels: { color: C.tick, font: { size: 10 }, boxWidth: 10 } },
+                            tooltip: tooltipBase
+                        },
+                        scales: scalesBase
+                    }
+                });
+            }
 
             // ── Deficit/Surplus chart (per-day, narrow bars, teal/rose palette) ──
             const deficits = pastDays.map(d => Math.round((d.logged - d.standard) * 100) / 100);
@@ -2541,56 +2563,66 @@
             const ROSE_DEF = 'rgba(251,113,133,0.72)';  // rose-400
             const ROSE_DEF_B = '#fb7185';
 
-            charts.deficit = new Chart(document.getElementById('chart-deficit').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: pastDays.map(d => d.day_label),
-                    datasets: [{
-                        label: 'Thiếu/Thừa',
-                        data: deficits,
-                        backgroundColor: deficits.map(v => v >= 0 ? TEAL_DEF : ROSE_DEF),
-                        borderColor: deficits.map(v => v >= 0 ? TEAL_DEF_B : ROSE_DEF_B),
-                        borderWidth: 1.5,
-                        borderRadius: 4,
-                        borderSkipped: false,
-                        barPercentage: 0.65,
-                        categoryPercentage: 0.80,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            ...tooltipBase,
-                            callbacks: {
-                                title: items => pastDays[items[0].dataIndex].date,
-                                label: ctx => {
-                                    const v = ctx.raw;
-                                    if (v === 0) return '  Đúng chuẩn ✅';
-                                    return v > 0 ? `  Thừa: +${fmtH(v)} ✅` : `  Thiếu: ${fmtH(v)} ⚠️`;
+            if (charts.deficit) {
+                charts.deficit.data.labels = pastDays.map(d => d.day_label);
+                charts.deficit.data.datasets[0].data = deficits;
+                charts.deficit.data.datasets[0].backgroundColor = deficits.map(v => v >= 0 ? TEAL_DEF : ROSE_DEF);
+                charts.deficit.data.datasets[0].borderColor = deficits.map(v => v >= 0 ? TEAL_DEF_B : ROSE_DEF_B);
+                charts.deficit.options.scales.y.min = -defMaxAbs;
+                charts.deficit.options.scales.y.max = defMaxAbs;
+                charts.deficit.update('none');
+            } else {
+                charts.deficit = new Chart(document.getElementById('chart-deficit').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: pastDays.map(d => d.day_label),
+                        datasets: [{
+                            label: 'Thiếu/Thừa',
+                            data: deficits,
+                            backgroundColor: deficits.map(v => v >= 0 ? TEAL_DEF : ROSE_DEF),
+                            borderColor: deficits.map(v => v >= 0 ? TEAL_DEF_B : ROSE_DEF_B),
+                            borderWidth: 1.5,
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barPercentage: 0.65,
+                            categoryPercentage: 0.80,
+                        }]
+                    },
+                    options: {
+                        animation: false,
+                        responsive: true,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                ...tooltipBase,
+                                callbacks: {
+                                    title: items => pastDays[items[0].dataIndex].date,
+                                    label: ctx => {
+                                        const v = ctx.raw;
+                                        if (v === 0) return '  Đúng chuẩn ✅';
+                                        return v > 0 ? `  Thừa: +${fmtH(v)} ✅` : `  Thiếu: ${fmtH(v)} ⚠️`;
+                                    }
                                 }
                             }
-                        }
-                    },
-                    scales: {
-                        x: { ...scalesBase.x, grid: { color: 'rgba(255,255,255,0.03)' } },
-                        y: {
-                            ...scalesBase.y,
-                            min: -defMaxAbs,
-                            max: defMaxAbs,
-                            ticks: {
-                                ...scalesBase.y.ticks,
-                                stepSize: 2,
-                                callback: v => v >= 0 ? `+${v}h` : `${v}h`
-                            },
-                            // Draw zero-line more prominently
-                            grid: { color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.04)' }
+                        },
+                        scales: {
+                            x: { ...scalesBase.x, grid: { color: 'rgba(255,255,255,0.03)' } },
+                            y: {
+                                ...scalesBase.y,
+                                min: -defMaxAbs,
+                                max: defMaxAbs,
+                                ticks: {
+                                    ...scalesBase.y.ticks,
+                                    stepSize: 2,
+                                    callback: v => v >= 0 ? `+${v}h` : `${v}h`
+                                },
+                                grid: { color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.04)' }
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         function switchTaskTab(tab) {
@@ -3417,6 +3449,13 @@
 
         // ── Bootstrap ──────────────────────────────────────────────────────────────
         init();
+
+        // Tự động tải lại dữ liệu từ DB mỗi 5 giây khi tab đang active
+        setInterval(() => {
+            if (currentMonth && !document.hidden) {
+                loadData(currentMonth);
+            }
+        }, 5000);
     </script>
 </body>
 
