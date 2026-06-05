@@ -2029,12 +2029,6 @@
                             ]
                         })),
                         new TableRow({ children: [mkSpanCell('B/KẾ HOẠCH THÁNG', 2)] }),
-                        ...[...(data.in_progress_tasks || []), ...(data.todo_tasks || [])].map(t => new TableRow({
-                            children: [
-                                mkCell([R(t.summary)]),
-                                mkCellC([R('Đang xử lý')]),
-                            ]
-                        })),
                         new TableRow({
                             children: [
                                 mkCell([R('')]),
