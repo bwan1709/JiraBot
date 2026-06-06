@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⏱ JiraBot — Time Spent Tracker</title>
+    <title>Jira — Time Spent Tracker</title>
     <meta name="description" content="Theo dõi thời gian làm việc Jira theo tháng">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2036,7 +2036,7 @@
                 <span class="footer-pill">☀️ T7: 4h/ngày (sáng)</span>
                 <span class="footer-pill">💤 CN: Nghỉ</span>
             </div>
-            <div>JiraBot Time Tracker</div>
+            <div>Jira Time Tracker</div>
         </div>
     </div>
 
@@ -2351,7 +2351,7 @@
                 });
 
                 XLSX.utils.book_append_sheet(wb, ws, currentMonth);
-                XLSX.writeFile(wb, `JiraBot_${currentMonth}.xlsx`);
+                XLSX.writeFile(wb, `Jira_${currentMonth}.xlsx`);
 
                 showToast(`✅ Xuất Excel thành công! ${data.tasks.length} tasks`, 'success');
             } catch (e) {
