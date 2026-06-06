@@ -1181,6 +1181,35 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        .timeline-lunch-break {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.01),
+                rgba(255, 255, 255, 0.01) 10px,
+                rgba(255, 255, 255, 0.025) 10px,
+                rgba(255, 255, 255, 0.025) 20px
+            );
+            border-left: 1px dashed rgba(255, 255, 255, 0.08);
+            border-right: 1px dashed rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .timeline-lunch-text {
+            color: var(--muted);
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            opacity: 0.45;
+        }
+
         .timeline-tracks {
             display: flex;
             flex-direction: column;
@@ -3620,6 +3649,14 @@
             let gridHtml = '';
             let labelHtml = '';
             
+            const lunchStartPct = ((12 - START_HOUR) / (END_HOUR - START_HOUR)) * 100;
+            const lunchWidthPct = (1 / (END_HOUR - START_HOUR)) * 100;
+            gridHtml += `
+                <div class="timeline-lunch-break" style="left: ${lunchStartPct}%; width: ${lunchWidthPct}%;">
+                    <span class="timeline-lunch-text">Nghỉ trưa</span>
+                </div>
+            `;
+            
             for (let h = START_HOUR; h <= END_HOUR; h++) {
                 const pct = ((h - START_HOUR) / (END_HOUR - START_HOUR)) * 100;
                 const isBold = h === START_HOUR || h === END_HOUR || h === 12;
@@ -3675,10 +3712,12 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 12px;">
                         <div class="timeline-summary-hours">
                             <span>Đã làm (8h-17h): <strong class="timeline-hours-val logged">0h</strong></span>
-                            <span>Trống: <strong class="timeline-hours-val free">9h</strong></span>
+                            <span>Trống: <strong class="timeline-hours-val free">8h</strong></span>
                         </div>
                         <div class="timeline-free-slots">
-                            <strong>Khoảng trống (8h-17h):</strong> <span class="timeline-free-badge">08:00 - 17:00 (9h)</span>
+                            <strong>Khoảng trống (8h-17h):</strong>
+                            <span class="timeline-free-badge">08:00 - 12:00 (4h)</span>
+                            <span class="timeline-free-badge">13:00 - 17:00 (4h)</span>
                         </div>
                     </div>
                 `;
@@ -3848,47 +3887,60 @@
             });
             container.innerHTML = tracksHtml;
 
-            const busyMsIntervals = [];
-            validBlocks.forEach(block => {
-                const sMs = Math.max(dayStartMs, block.s.getTime());
-                const eMs = Math.min(dayEndMs, block.e.getTime());
-                if (sMs < eMs) {
-                    busyMsIntervals.push({ s: sMs, e: eMs });
-                }
-            });
+            const dayLunchStartMs = new Date(dateStr + 'T12:00:00').getTime();
+            const dayLunchEndMs = new Date(dateStr + 'T13:00:00').getTime();
 
-            busyMsIntervals.sort((a, b) => a.s - b.s);
-            const mergedBusy = [];
-            busyMsIntervals.forEach(curr => {
-                if (mergedBusy.length === 0) {
-                    mergedBusy.push(curr);
-                } else {
-                    const last = mergedBusy[mergedBusy.length - 1];
-                    if (curr.s <= last.e) {
-                        last.e = Math.max(last.e, curr.e);
-                    } else {
-                        mergedBusy.push(curr);
-                    }
-                }
-            });
+            const standardSessions = [
+                { s: dayStartMs, e: dayLunchStartMs },
+                { s: dayLunchEndMs, e: dayEndMs }
+            ];
 
             const freeIntervals = [];
-            let currentMs = dayStartMs;
-            mergedBusy.forEach(interval => {
-                if (interval.s > currentMs) {
-                    freeIntervals.push({ s: currentMs, e: interval.s });
-                }
-                currentMs = Math.max(currentMs, interval.e);
-            });
-            if (currentMs < dayEndMs) {
-                freeIntervals.push({ s: currentMs, e: dayEndMs });
-            }
-
             let totalBusyMins = 0;
-            mergedBusy.forEach(interval => {
-                totalBusyMins += (interval.e - interval.s) / (1000 * 60);
+
+            standardSessions.forEach(session => {
+                const busyInSession = [];
+                validBlocks.forEach(block => {
+                    const sMs = Math.max(session.s, block.s.getTime());
+                    const eMs = Math.min(session.e, block.e.getTime());
+                    if (sMs < eMs) {
+                        busyInSession.push({ s: sMs, e: eMs });
+                    }
+                });
+
+                busyInSession.sort((a, b) => a.s - b.s);
+                const mergedBusyInSession = [];
+                busyInSession.forEach(curr => {
+                    if (mergedBusyInSession.length === 0) {
+                        mergedBusyInSession.push(curr);
+                    } else {
+                        const last = mergedBusyInSession[mergedBusyInSession.length - 1];
+                        if (curr.s <= last.e) {
+                            last.e = Math.max(last.e, curr.e);
+                        } else {
+                            mergedBusyInSession.push(curr);
+                        }
+                    }
+                });
+
+                let currentMs = session.s;
+                mergedBusyInSession.forEach(interval => {
+                    if (interval.s > currentMs) {
+                        freeIntervals.push({ s: currentMs, e: interval.s });
+                    }
+                    currentMs = Math.max(currentMs, interval.e);
+                });
+                if (currentMs < session.e) {
+                    freeIntervals.push({ s: currentMs, e: session.e });
+                }
+
+                mergedBusyInSession.forEach(interval => {
+                    totalBusyMins += (interval.e - interval.s) / (1000 * 60);
+                });
             });
-            const totalFreeMins = TOTAL_MINUTES - totalBusyMins;
+
+            const STANDARD_CAPACITY_MINS = 8 * 60;
+            const totalFreeMins = Math.max(0, STANDARD_CAPACITY_MINS - totalBusyMins);
 
             const formatDuration = (mins) => {
                 const h = Math.floor(mins / 60);
