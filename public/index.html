@@ -3631,24 +3631,50 @@
             labelsContainer.innerHTML = labelHtml;
         }
 
-        function renderTimeline(tasks, worklogs, dateStr) {
+        function renderTimeline(tasks, rawWorklogs, dateStr) {
             renderTimelineGrid();
+            
+            function extractCommentText(comment) {
+                if (!comment) return '';
+                if (typeof comment === 'string') return comment;
+                if (typeof comment === 'object') {
+                    try {
+                        if (comment.type === 'doc' && Array.isArray(comment.content)) {
+                            return comment.content
+                                .map(paragraph => {
+                                    if (paragraph.content && Array.isArray(paragraph.content)) {
+                                        return paragraph.content
+                                            .map(child => child.text || '')
+                                            .join('');
+                                    }
+                                    return '';
+                                })
+                                .filter(Boolean)
+                                .join('\n');
+                        }
+                    } catch (e) {
+                        console.error('Lỗi parse comment ADF:', e);
+                    }
+                    return JSON.stringify(comment);
+                }
+                return String(comment);
+            }
             
             const container = document.getElementById('timeline-tracks-container');
             const footerSummary = document.getElementById('timeline-footer-summary');
             if (!container || !footerSummary) return;
             
-            if (worklogs.length === 0) {
+            if (!tasks || tasks.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; color: var(--muted); padding: 32px 10px; font-size: 13px;">
-                        ☕ Không có worklog nào từ 8h – 17h.
+                        ☕ Không có task nào được ghi nhận cho ngày này.
                         <div style="font-size: 11px; opacity: 0.65; margin-top: 4px;">Hôm nay bạn hoàn toàn trống lịch làm việc.</div>
                     </div>
                 `;
                 footerSummary.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 12px;">
                         <div class="timeline-summary-hours">
-                            <span>Đã log (8h-17h): <strong class="timeline-hours-val logged">0h</strong></span>
+                            <span>Đã làm (8h-17h): <strong class="timeline-hours-val logged">0h</strong></span>
                             <span>Trống: <strong class="timeline-hours-val free">9h</strong></span>
                         </div>
                         <div class="timeline-free-slots">
@@ -3661,45 +3687,89 @@
 
             const dayStartMin = START_HOUR * 60;
             const dayEndMin = END_HOUR * 60;
+            const dayMidnightMs = new Date(dateStr + 'T00:00:00').getTime();
+            const dayStartMs = new Date(dateStr + 'T08:00:00').getTime();
+            const dayEndMs = new Date(dateStr + 'T17:00:00').getTime();
             
-            const validWorklogs = [];
-            const outsideWorklogs = [];
+            const validBlocks = [];
+            const outsideBlocks = [];
             
-            worklogs.forEach(wl => {
-                const d = new Date(wl.started);
-                const wlStartMin = d.getHours() * 60 + d.getMinutes();
-                const wlDurationMin = Math.round(wl.timeSpentSeconds / 60);
-                const wlEndMin = wlStartMin + wlDurationMin;
+            tasks.forEach(t => {
+                const taskWorklogs = rawWorklogs.filter(wl => wl.key === t.key);
                 
-                const visStartMin = Math.max(dayStartMin, wlStartMin);
-                const visEndMin = Math.min(dayEndMin, wlEndMin);
+                const comments = taskWorklogs
+                    .map(wl => extractCommentText(wl.comment))
+                    .filter(c => c && c.trim() !== '')
+                    .join(' | ');
+                    
+                const timeSpentTodaySec = taskWorklogs.reduce((sum, wl) => sum + wl.timeSpentSeconds, 0);
+                
+                let s = null;
+                if (t.actual_start) {
+                    s = new Date(t.actual_start);
+                } else if (taskWorklogs.length > 0) {
+                    const sortedWls = [...taskWorklogs].sort((a, b) => new Date(a.started).getTime() - new Date(b.started).getTime());
+                    s = new Date(sortedWls[0].started);
+                }
+                
+                let e = null;
+                if (t.actual_end) {
+                    e = new Date(t.actual_end);
+                } else if (taskWorklogs.length > 0) {
+                    const sortedWls = [...taskWorklogs].sort((a, b) => new Date(a.started).getTime() - new Date(b.started).getTime());
+                    const lastWl = sortedWls[sortedWls.length - 1];
+                    e = new Date(new Date(lastWl.started).getTime() + lastWl.timeSpentSeconds * 1000);
+                }
+                
+                if (!s) {
+                    s = new Date(dayStartMs);
+                }
+                if (!e) {
+                    e = new Date(s.getTime() + (timeSpentTodaySec > 0 ? timeSpentTodaySec * 1000 : 3600 * 1000));
+                }
+                
+                if (s.getTime() >= e.getTime()) {
+                    e = new Date(s.getTime() + 30 * 60 * 1000);
+                }
+                
+                const startMinFromMidnight = Math.round((s.getTime() - dayMidnightMs) / 60000);
+                const endMinFromMidnight = Math.round((e.getTime() - dayMidnightMs) / 60000);
+                
+                const visStartMin = Math.max(dayStartMin, startMinFromMidnight);
+                const visEndMin = Math.min(dayEndMin, endMinFromMidnight);
+                
+                const blockInfo = {
+                    key: t.key,
+                    summary: t.summary,
+                    url: t.url,
+                    original_estimate: t.original_estimate,
+                    actual_start: t.actual_start,
+                    actual_end: t.actual_end,
+                    s,
+                    e,
+                    startMinFromMidnight,
+                    endMinFromMidnight,
+                    visStartMin,
+                    visEndMin,
+                    comments,
+                    timeSpentTodaySec
+                };
                 
                 if (visEndMin > visStartMin) {
-                    validWorklogs.push({
-                        ...wl,
-                        wlStartMin,
-                        wlEndMin,
-                        visStartMin,
-                        visEndMin
-                    });
+                    validBlocks.push(blockInfo);
                 } else {
-                    outsideWorklogs.push({
-                        ...wl,
-                        wlStartMin,
-                        wlEndMin
-                    });
+                    outsideBlocks.push(blockInfo);
                 }
             });
 
-            validWorklogs.sort((a, b) => a.wlStartMin - b.wlStartMin);
+            validBlocks.sort((a, b) => a.visStartMin - b.visStartMin);
 
-            // Calculate tracks (rows) for overlaps
             const tracks = [];
-            validWorklogs.forEach(wl => {
+            validBlocks.forEach(block => {
                 let trackIndex = -1;
                 for (let i = 0; i < tracks.length; i++) {
                     const overlaps = tracks[i].some(existing => {
-                        return (wl.wlStartMin < existing.wlEndMin && wl.wlEndMin > existing.wlStartMin);
+                        return (block.visStartMin < existing.visEndMin && block.visEndMin > existing.visStartMin);
                     });
                     if (!overlaps) {
                         trackIndex = i;
@@ -3707,40 +3777,68 @@
                     }
                 }
                 if (trackIndex === -1) {
-                    tracks.push([wl]);
+                    tracks.push([block]);
                 } else {
-                    tracks[trackIndex].push(wl);
+                    tracks[trackIndex].push(block);
                 }
             });
 
-            // Render tracks
             let tracksHtml = '';
             tracks.forEach(track => {
                 let blocksHtml = '';
-                track.forEach(wl => {
-                    const leftPct = ((wl.visStartMin - dayStartMin) / TOTAL_MINUTES) * 100;
-                    const widthPct = ((wl.visEndMin - wl.visStartMin) / TOTAL_MINUTES) * 100;
+                track.forEach(block => {
+                    const leftPct = ((block.visStartMin - dayStartMin) / TOTAL_MINUTES) * 100;
+                    const widthPct = ((block.visEndMin - block.visStartMin) / TOTAL_MINUTES) * 100;
                     
-                    const formatTime = (totalMins) => {
-                        const h = Math.floor(totalMins / 60);
-                        const m = totalMins % 60;
-                        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    const formatTime = (d) => {
+                        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                     };
                     
-                    const durationStr = wl.timeSpentSeconds >= 3600 
-                        ? `${(wl.timeSpentSeconds / 3600).toFixed(1)}h`
-                        : `${Math.round(wl.timeSpentSeconds / 60)}m`;
+                    const getLocalDateStr = (d) => {
+                        const pad = (n) => String(n).padStart(2, '0');
+                        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                    };
+
+                    const pad2 = (n) => String(n).padStart(2, '0');
+
+                    const startDayStr = getLocalDateStr(block.s);
+                    const endDayStr = getLocalDateStr(block.e);
+                    
+                    let startStr = formatTime(block.s);
+                    let endStr = formatTime(block.e);
+                    
+                    if (startDayStr !== dateStr) {
+                        startStr = `${startStr} (${pad2(block.s.getDate())}/${pad2(block.s.getMonth() + 1)})`;
+                    }
+                    if (endDayStr !== dateStr) {
+                        endStr = `${endStr} (${pad2(block.e.getDate())}/${pad2(block.e.getMonth() + 1)})`;
+                    }
+                    
+                    const timeRange = `${startStr} - ${endStr}`;
+                    
+                    const totalDurSec = Math.round((block.e.getTime() - block.s.getTime()) / 1000);
+                    const durationStr = totalDurSec >= 3600 
+                        ? `${(totalDurSec / 3600).toFixed(1)}h`
+                        : `${Math.round(totalDurSec / 60)}m`;
                         
-                    const timeRange = `${formatTime(wl.wlStartMin)} - ${formatTime(wl.wlEndMin)}`;
-                    const tooltipText = `${wl.key}: ${wl.summary}\nThời gian: ${timeRange} (${durationStr})\nComment: ${wl.comment || '(Không có comment)'}`;
+                    const todayLoggedStr = block.timeSpentTodaySec >= 3600
+                        ? `${(block.timeSpentTodaySec / 3600).toFixed(1)}h`
+                        : `${Math.round(block.timeSpentTodaySec / 60)}m`;
+
+                    let tooltipText = `${block.key}: ${block.summary}\n`;
+                    tooltipText += `Actual Start: ${block.actual_start ? formatISOToDateTime(block.actual_start) : 'N/A'}\n`;
+                    tooltipText += `Actual End: ${block.actual_end ? formatISOToDateTime(block.actual_end) : 'N/A'}\n`;
+                    tooltipText += `Tổng thời gian thực tế: ${durationStr}\n`;
+                    tooltipText += `Đã log hôm nay: ${block.timeSpentTodaySec > 0 ? todayLoggedStr : '0h'}\n`;
+                    tooltipText += `Comment: ${block.comments || '(Không có comment)'}`;
 
                     blocksHtml += `
                         <div class="timeline-block" 
-                             style="left: ${leftPct}%; width: ${widthPct}%;" 
-                             title="${escHtml(tooltipText)}" 
-                             onclick="window.open('${wl.url}', '_blank')">
+                              style="left: ${leftPct}%; width: ${widthPct}%;" 
+                              title="${escHtml(tooltipText)}" 
+                              onclick="window.open('${block.url}', '_blank')">
                             <div class="timeline-block-content">
-                                <div class="timeline-block-title">${escHtml(wl.key)}</div>
+                                <div class="timeline-block-title">${escHtml(block.key)}</div>
                                 <div class="timeline-block-time">${timeRange} (${durationStr})</div>
                             </div>
                         </div>
@@ -3750,21 +3848,12 @@
             });
             container.innerHTML = tracksHtml;
 
-            // Compute unified free time gaps
-            const freeIntervals = [];
-            const datePrefix = dateStr + 'T';
-            const dayStartMs = new Date(datePrefix + '08:00:00').getTime();
-            const dayEndMs = new Date(datePrefix + '17:00:00').getTime();
-            
             const busyMsIntervals = [];
-            validWorklogs.forEach(wl => {
-                const wlStartMs = new Date(wl.started).getTime();
-                const wlEndMs = wlStartMs + wl.timeSpentSeconds * 1000;
-                
-                const s = Math.max(dayStartMs, wlStartMs);
-                const e = Math.min(dayEndMs, wlEndMs);
-                if (s < e) {
-                    busyMsIntervals.push({ s, e });
+            validBlocks.forEach(block => {
+                const sMs = Math.max(dayStartMs, block.s.getTime());
+                const eMs = Math.min(dayEndMs, block.e.getTime());
+                if (sMs < eMs) {
+                    busyMsIntervals.push({ s: sMs, e: eMs });
                 }
             });
 
@@ -3783,6 +3872,7 @@
                 }
             });
 
+            const freeIntervals = [];
             let currentMs = dayStartMs;
             mergedBusy.forEach(interval => {
                 if (interval.s > currentMs) {
@@ -3794,7 +3884,6 @@
                 freeIntervals.push({ s: currentMs, e: dayEndMs });
             }
 
-            // Calculate totals
             let totalBusyMins = 0;
             mergedBusy.forEach(interval => {
                 totalBusyMins += (interval.e - interval.s) / (1000 * 60);
@@ -3824,20 +3913,19 @@
             }
 
             let outsideHtml = '';
-            if (outsideWorklogs.length > 0) {
-                const outsideList = outsideWorklogs.map(wl => {
-                    const d = new Date(wl.started);
-                    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                    const dur = wl.timeSpentSeconds >= 3600 ? `${(wl.timeSpentSeconds / 3600).toFixed(1)}h` : `${Math.round(wl.timeSpentSeconds / 60)}m`;
-                    return `${wl.key} (${timeStr}, ${dur})`;
+            if (outsideBlocks.length > 0) {
+                const outsideList = outsideBlocks.map(block => {
+                    const startStr = `${String(block.s.getHours()).padStart(2, '0')}:${String(block.s.getMinutes()).padStart(2, '0')}`;
+                    const endStr = `${String(block.e.getHours()).padStart(2, '0')}:${String(block.e.getMinutes()).padStart(2, '0')}`;
+                    return `${block.key} (${startStr} - ${endStr})`;
                 }).join(', ');
-                outsideHtml = `<div style="font-size: 10px; opacity: 0.8; color: var(--muted); width: 100%; margin-top: 8px;">🌙 Log ngoài giờ (8h-17h): ${escHtml(outsideList)}</div>`;
+                outsideHtml = `<div style="font-size: 10px; opacity: 0.8; color: var(--muted); width: 100%; margin-top: 8px;">🌙 Làm ngoài giờ (8h-17h): ${escHtml(outsideList)}</div>`;
             }
 
             footerSummary.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 12px;">
                     <div class="timeline-summary-hours">
-                        <span>Đã log (trong chuẩn 8h-17h): <strong class="timeline-hours-val logged">${formatDuration(totalBusyMins)}</strong></span>
+                        <span>Đã làm (trong chuẩn 8h-17h): <strong class="timeline-hours-val logged">${formatDuration(totalBusyMins)}</strong></span>
                         <span>Trống: <strong class="timeline-hours-val free">${formatDuration(totalFreeMins)}</strong></span>
                     </div>
                     <div class="timeline-free-slots">
@@ -4129,6 +4217,19 @@
             const h = String(d.getHours()).padStart(2, '0');
             const min = String(d.getMinutes()).padStart(2, '0');
             return `${y}-${m}-${day}T${h}:${min}`;
+        }
+
+        function formatISOToDateTime(isoStr) {
+            if (!isoStr) return '—';
+            const date = new Date(isoStr);
+            if (isNaN(date.getTime())) return '—';
+            const pad = (n) => String(n).padStart(2, '0');
+            const dd = pad(date.getDate());
+            const mm = pad(date.getMonth() + 1);
+            const yyyy = date.getFullYear();
+            const hh = pad(date.getHours());
+            const min = pad(date.getMinutes());
+            return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
         }
 
         function toJiraIsoDateTime(localVal) {
