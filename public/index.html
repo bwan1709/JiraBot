@@ -1104,6 +1104,217 @@
             background: var(--surface-2);
             color: var(--text);
         }
+
+        /* ── Daily Timeline ── */
+        .timeline-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .timeline-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .timeline-date-picker {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-2);
+            border-radius: 10px;
+            color: var(--text);
+            padding: 7px 12px;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .timeline-date-picker:focus {
+            border-color: var(--purple);
+        }
+
+        .timeline-date-picker::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+        }
+
+        .timeline-body {
+            position: relative;
+            background: rgba(255, 255, 255, 0.012);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 0 28px 0;
+            margin-top: 10px;
+            min-height: 80px;
+            overflow: hidden;
+        }
+
+        .timeline-grid {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .timeline-grid-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .timeline-grid-line.bold {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-tracks {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+            padding: 0 16px;
+        }
+
+        .timeline-track {
+            position: relative;
+            height: 38px;
+            width: 100%;
+        }
+
+        .timeline-block {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(135deg, var(--purple), var(--indigo));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #fff;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+            transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+            overflow: hidden;
+        }
+
+        .timeline-block:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(139, 92, 246, 0.45);
+            filter: brightness(1.1);
+            z-index: 10;
+        }
+
+        .timeline-block-content {
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .timeline-block-title {
+            font-weight: 700;
+        }
+
+        .timeline-block-time {
+            opacity: 0.85;
+            font-size: 10px;
+        }
+
+        .timeline-labels {
+            position: relative;
+            width: 100%;
+            height: 20px;
+            margin-top: 10px;
+            z-index: 2;
+        }
+
+        .timeline-label {
+            position: absolute;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .timeline-footer {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--border);
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .timeline-summary-hours {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-weight: 500;
+        }
+
+        .timeline-hours-val {
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .timeline-hours-val.logged {
+            color: #34d399;
+        }
+
+        .timeline-hours-val.free {
+            color: #60a5fa;
+        }
+
+        .timeline-free-slots {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 11px;
+            line-height: 1.5;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .timeline-free-slots strong {
+            color: var(--text);
+        }
+
+        .timeline-free-badge {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.12);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-family: monospace;
+            margin-right: 4px;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
     </style>
 </head>
 
@@ -1702,6 +1913,39 @@
                 <canvas id="chart-deficit" height="65"></canvas>
             </div>
 
+            <!-- Daily Timeline Card -->
+            <div class="timeline-card" id="daily-timeline-card">
+                <div class="timeline-header">
+                    <div>
+                        <div class="section-title">⏱ Sơ đồ thời gian trong ngày</div>
+                        <div class="section-sub">Phân bổ worklog chi tiết từ 8h – 17h</div>
+                    </div>
+                    <div class="timeline-nav">
+                        <button class="btn btn-ghost" onclick="navigateTimelineDay(-1)" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;">◀</button>
+                        <input type="date" id="timeline-date" class="timeline-date-picker" onchange="onTimelineDateChange()">
+                        <button class="btn btn-ghost" onclick="navigateTimelineDay(1)" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;">▶</button>
+                        <button class="btn btn-ghost" onclick="setTimelineToToday()" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; color: var(--purple-l); border-color: rgba(139,92,246,0.25);">Hôm nay</button>
+                    </div>
+                </div>
+
+                <div class="timeline-body">
+                    <!-- Grid Lines background -->
+                    <div class="timeline-grid" id="timeline-grid-lines"></div>
+
+                    <!-- Tracks container -->
+                    <div class="timeline-tracks" id="timeline-tracks-container">
+                        <!-- Tracks and blocks will be rendered here dynamically -->
+                    </div>
+
+                    <!-- Labels absolute overlay -->
+                    <div class="timeline-labels" id="timeline-labels-container"></div>
+                </div>
+
+                <div class="timeline-footer" id="timeline-footer-summary">
+                    <!-- Summary loaded dynamically -->
+                </div>
+            </div>
+
             <!-- Task table -->
             <div class="table-card">
                 <div class="table-header">
@@ -1779,6 +2023,7 @@
         let activeProject = 'all';
         let currentPage = 1;
         const PAGE_SIZE = 20;
+        let activeTimelineDate = null;
 
         const C = {
             green: '#10b981', greenA: 'rgba(16,185,129,0.75)',
@@ -2617,6 +2862,13 @@
             renderProgress(data);
             renderCharts(data);
             renderTable();
+            
+            // Render daily timeline
+            if (!activeTimelineDate || activeTimelineDate.substring(0, 7) !== currentMonth) {
+                initTimelineDate(data);
+            } else {
+                loadTimeline(activeTimelineDate);
+            }
         }
 
         function renderUpdateBar(data) {
@@ -2837,6 +3089,15 @@
                         ]
                     },
                     options: {
+                        onClick: (event, elements) => {
+                            if (elements && elements.length > 0) {
+                                const idx = elements[0].index;
+                                if (currentData && currentData.working_days && currentData.working_days[idx]) {
+                                    const selectedDate = currentData.working_days[idx].date;
+                                    changeTimelineDate(selectedDate);
+                                }
+                            }
+                        },
                         animation: false,
                         responsive: true, maintainAspectRatio: true,
                         interaction: { mode: 'index', intersect: false },
@@ -3305,6 +3566,318 @@
             }
 
             renderPagination(totalTasks);
+        }
+
+        // ── Daily Timeline Functions ───────────────────────────────────────────────
+        const START_HOUR = 8;
+        const END_HOUR = 17;
+        const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60; // 540 minutes
+
+        function initTimelineDate(data) {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+            
+            if (currentMonth && todayStr.substring(0, 7) === currentMonth) {
+                loadTimeline(todayStr);
+            } else if (data && data.working_days && data.working_days.length > 0) {
+                const lastPastDay = [...data.working_days].reverse().find(d => d.date <= todayStr);
+                if (lastPastDay) {
+                    loadTimeline(lastPastDay.date);
+                } else {
+                    loadTimeline(data.working_days[0].date);
+                }
+            } else {
+                loadTimeline(todayStr);
+            }
+        }
+
+        async function loadTimeline(dateStr) {
+            if (!dateStr) return;
+            activeTimelineDate = dateStr;
+            const dateInput = document.getElementById('timeline-date');
+            if (dateInput) dateInput.value = dateStr;
+
+            const container = document.getElementById('timeline-tracks-container');
+            if (!container) return;
+            container.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 20px; font-size: 11px;">⏳ Đang tải timeline...</div>';
+
+            try {
+                const res = await fetch(`/api/daily-report?date=${dateStr}`);
+                if (!res.ok) throw new Error('Không thể tải dữ liệu ngày');
+                const data = await res.json();
+                renderTimeline(data.tasks || [], data.worklogs || [], dateStr);
+            } catch (e) {
+                container.innerHTML = `<div style="text-align: center; color: var(--red); padding: 20px; font-size: 11px;">❌ Lỗi: ${e.message}</div>`;
+            }
+        }
+
+        function renderTimelineGrid() {
+            const gridLines = document.getElementById('timeline-grid-lines');
+            const labelsContainer = document.getElementById('timeline-labels-container');
+            if (!gridLines || !labelsContainer) return;
+            
+            let gridHtml = '';
+            let labelHtml = '';
+            
+            for (let h = START_HOUR; h <= END_HOUR; h++) {
+                const pct = ((h - START_HOUR) / (END_HOUR - START_HOUR)) * 100;
+                const isBold = h === START_HOUR || h === END_HOUR || h === 12;
+                gridHtml += `<div class="timeline-grid-line ${isBold ? 'bold' : ''}" style="left: ${pct}%;"></div>`;
+                labelHtml += `<div class="timeline-label" style="left: ${pct}%;">${h}h</div>`;
+            }
+            
+            gridLines.innerHTML = gridHtml;
+            labelsContainer.innerHTML = labelHtml;
+        }
+
+        function renderTimeline(tasks, worklogs, dateStr) {
+            renderTimelineGrid();
+            
+            const container = document.getElementById('timeline-tracks-container');
+            const footerSummary = document.getElementById('timeline-footer-summary');
+            if (!container || !footerSummary) return;
+            
+            if (worklogs.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: var(--muted); padding: 32px 10px; font-size: 13px;">
+                        ☕ Không có worklog nào từ 8h – 17h.
+                        <div style="font-size: 11px; opacity: 0.65; margin-top: 4px;">Hôm nay bạn hoàn toàn trống lịch làm việc.</div>
+                    </div>
+                `;
+                footerSummary.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 12px;">
+                        <div class="timeline-summary-hours">
+                            <span>Đã log (8h-17h): <strong class="timeline-hours-val logged">0h</strong></span>
+                            <span>Trống: <strong class="timeline-hours-val free">9h</strong></span>
+                        </div>
+                        <div class="timeline-free-slots">
+                            <strong>Khoảng trống (8h-17h):</strong> <span class="timeline-free-badge">08:00 - 17:00 (9h)</span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const dayStartMin = START_HOUR * 60;
+            const dayEndMin = END_HOUR * 60;
+            
+            const validWorklogs = [];
+            const outsideWorklogs = [];
+            
+            worklogs.forEach(wl => {
+                const d = new Date(wl.started);
+                const wlStartMin = d.getHours() * 60 + d.getMinutes();
+                const wlDurationMin = Math.round(wl.timeSpentSeconds / 60);
+                const wlEndMin = wlStartMin + wlDurationMin;
+                
+                const visStartMin = Math.max(dayStartMin, wlStartMin);
+                const visEndMin = Math.min(dayEndMin, wlEndMin);
+                
+                if (visEndMin > visStartMin) {
+                    validWorklogs.push({
+                        ...wl,
+                        wlStartMin,
+                        wlEndMin,
+                        visStartMin,
+                        visEndMin
+                    });
+                } else {
+                    outsideWorklogs.push({
+                        ...wl,
+                        wlStartMin,
+                        wlEndMin
+                    });
+                }
+            });
+
+            validWorklogs.sort((a, b) => a.wlStartMin - b.wlStartMin);
+
+            // Calculate tracks (rows) for overlaps
+            const tracks = [];
+            validWorklogs.forEach(wl => {
+                let trackIndex = -1;
+                for (let i = 0; i < tracks.length; i++) {
+                    const overlaps = tracks[i].some(existing => {
+                        return (wl.wlStartMin < existing.wlEndMin && wl.wlEndMin > existing.wlStartMin);
+                    });
+                    if (!overlaps) {
+                        trackIndex = i;
+                        break;
+                    }
+                }
+                if (trackIndex === -1) {
+                    tracks.push([wl]);
+                } else {
+                    tracks[trackIndex].push(wl);
+                }
+            });
+
+            // Render tracks
+            let tracksHtml = '';
+            tracks.forEach(track => {
+                let blocksHtml = '';
+                track.forEach(wl => {
+                    const leftPct = ((wl.visStartMin - dayStartMin) / TOTAL_MINUTES) * 100;
+                    const widthPct = ((wl.visEndMin - wl.visStartMin) / TOTAL_MINUTES) * 100;
+                    
+                    const formatTime = (totalMins) => {
+                        const h = Math.floor(totalMins / 60);
+                        const m = totalMins % 60;
+                        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    };
+                    
+                    const durationStr = wl.timeSpentSeconds >= 3600 
+                        ? `${(wl.timeSpentSeconds / 3600).toFixed(1)}h`
+                        : `${Math.round(wl.timeSpentSeconds / 60)}m`;
+                        
+                    const timeRange = `${formatTime(wl.wlStartMin)} - ${formatTime(wl.wlEndMin)}`;
+                    const tooltipText = `${wl.key}: ${wl.summary}\nThời gian: ${timeRange} (${durationStr})\nComment: ${wl.comment || '(Không có comment)'}`;
+
+                    blocksHtml += `
+                        <div class="timeline-block" 
+                             style="left: ${leftPct}%; width: ${widthPct}%;" 
+                             title="${escHtml(tooltipText)}" 
+                             onclick="window.open('${wl.url}', '_blank')">
+                            <div class="timeline-block-content">
+                                <div class="timeline-block-title">${escHtml(wl.key)}</div>
+                                <div class="timeline-block-time">${timeRange} (${durationStr})</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                tracksHtml += `<div class="timeline-track">${blocksHtml}</div>`;
+            });
+            container.innerHTML = tracksHtml;
+
+            // Compute unified free time gaps
+            const freeIntervals = [];
+            const datePrefix = dateStr + 'T';
+            const dayStartMs = new Date(datePrefix + '08:00:00').getTime();
+            const dayEndMs = new Date(datePrefix + '17:00:00').getTime();
+            
+            const busyMsIntervals = [];
+            validWorklogs.forEach(wl => {
+                const wlStartMs = new Date(wl.started).getTime();
+                const wlEndMs = wlStartMs + wl.timeSpentSeconds * 1000;
+                
+                const s = Math.max(dayStartMs, wlStartMs);
+                const e = Math.min(dayEndMs, wlEndMs);
+                if (s < e) {
+                    busyMsIntervals.push({ s, e });
+                }
+            });
+
+            busyMsIntervals.sort((a, b) => a.s - b.s);
+            const mergedBusy = [];
+            busyMsIntervals.forEach(curr => {
+                if (mergedBusy.length === 0) {
+                    mergedBusy.push(curr);
+                } else {
+                    const last = mergedBusy[mergedBusy.length - 1];
+                    if (curr.s <= last.e) {
+                        last.e = Math.max(last.e, curr.e);
+                    } else {
+                        mergedBusy.push(curr);
+                    }
+                }
+            });
+
+            let currentMs = dayStartMs;
+            mergedBusy.forEach(interval => {
+                if (interval.s > currentMs) {
+                    freeIntervals.push({ s: currentMs, e: interval.s });
+                }
+                currentMs = Math.max(currentMs, interval.e);
+            });
+            if (currentMs < dayEndMs) {
+                freeIntervals.push({ s: currentMs, e: dayEndMs });
+            }
+
+            // Calculate totals
+            let totalBusyMins = 0;
+            mergedBusy.forEach(interval => {
+                totalBusyMins += (interval.e - interval.s) / (1000 * 60);
+            });
+            const totalFreeMins = TOTAL_MINUTES - totalBusyMins;
+
+            const formatDuration = (mins) => {
+                const h = Math.floor(mins / 60);
+                const m = Math.round(mins % 60);
+                return m === 0 ? `${h}h` : `${h}h ${m}m`;
+            };
+
+            const formatTimeFromMs = (ms) => {
+                const d = new Date(ms);
+                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            };
+
+            let freeSlotsHtml = '';
+            if (freeIntervals.length === 0) {
+                freeSlotsHtml = '<span>Không còn thời gian trống! 🎉</span>';
+            } else {
+                freeSlotsHtml = '<strong>Khoảng trống (8h-17h):</strong> ' + freeIntervals.map(interval => {
+                    const range = `${formatTimeFromMs(interval.s)} - ${formatTimeFromMs(interval.e)}`;
+                    const durationMins = (interval.e - interval.s) / (1000 * 60);
+                    return `<span class="timeline-free-badge">${range} (${formatDuration(durationMins)})</span>`;
+                }).join(' ');
+            }
+
+            let outsideHtml = '';
+            if (outsideWorklogs.length > 0) {
+                const outsideList = outsideWorklogs.map(wl => {
+                    const d = new Date(wl.started);
+                    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    const dur = wl.timeSpentSeconds >= 3600 ? `${(wl.timeSpentSeconds / 3600).toFixed(1)}h` : `${Math.round(wl.timeSpentSeconds / 60)}m`;
+                    return `${wl.key} (${timeStr}, ${dur})`;
+                }).join(', ');
+                outsideHtml = `<div style="font-size: 10px; opacity: 0.8; color: var(--muted); width: 100%; margin-top: 8px;">🌙 Log ngoài giờ (8h-17h): ${escHtml(outsideList)}</div>`;
+            }
+
+            footerSummary.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 12px;">
+                    <div class="timeline-summary-hours">
+                        <span>Đã log (trong chuẩn 8h-17h): <strong class="timeline-hours-val logged">${formatDuration(totalBusyMins)}</strong></span>
+                        <span>Trống: <strong class="timeline-hours-val free">${formatDuration(totalFreeMins)}</strong></span>
+                    </div>
+                    <div class="timeline-free-slots">
+                        ${freeSlotsHtml}
+                    </div>
+                </div>
+                ${outsideHtml}
+            `;
+        }
+
+        function navigateTimelineDay(offset) {
+            const curDate = new Date(activeTimelineDate);
+            if (isNaN(curDate.getTime())) return;
+            curDate.setDate(curDate.getDate() + offset);
+            const pad = (n) => String(n).padStart(2, '0');
+            const dateStr = `${curDate.getFullYear()}-${pad(curDate.getMonth() + 1)}-${pad(curDate.getDate())}`;
+            loadTimeline(dateStr);
+        }
+
+        function onTimelineDateChange() {
+            const picker = document.getElementById('timeline-date');
+            if (picker && picker.value) {
+                loadTimeline(picker.value);
+            }
+        }
+
+        function setTimelineToToday() {
+            const d = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            loadTimeline(dateStr);
+        }
+
+        function changeTimelineDate(dateStr) {
+            loadTimeline(dateStr);
+            // Scroll smoothly to timeline card
+            const el = document.getElementById('daily-timeline-card');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
         function escHtml(str) {

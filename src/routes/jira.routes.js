@@ -230,7 +230,31 @@ router.get('/daily-report', async (req, res) => {
             };
         });
 
-        res.json({ date, tasks });
+        // Extract and sort individual worklogs for the timeline
+        const worklogs = [];
+        issues.forEach(issue => {
+            const wls = issue.fields.worklog?.worklogs || [];
+            wls.forEach(wl => {
+                if (wl.author.accountId !== req.user.account_id) return;
+                
+                const startedDateStr = getLocalDateStr(wl.started);
+                if (startedDateStr === date) {
+                    worklogs.push({
+                        id: wl.id,
+                        key: issue.key,
+                        summary: issue.fields.summary,
+                        url: `${req.user.base_url}/browse/${issue.key}`,
+                        comment: wl.comment || '',
+                        started: wl.started, // raw ISO timestamp
+                        timeSpentSeconds: wl.timeSpentSeconds,
+                        timeSpent: wl.timeSpent
+                    });
+                }
+            });
+        });
+        worklogs.sort((a, b) => a.started.localeCompare(b.started));
+
+        res.json({ date, tasks, worklogs });
     } catch (e) {
         console.error('❌ Lỗi tải báo cáo ngày:', e.message);
         res.status(500).json({ error: e.message });
