@@ -1,27 +1,40 @@
-# Dockerfile
-FROM node:20-slim
-
-# Install build tools needed for better-sqlite3
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
+# ─────────────────────────────────────────────────────────────
+# Stage 1 — build the React (Vite) app into /app/dist
+# ─────────────────────────────────────────────────────────────
+FROM node:20-slim AS builder
 WORKDIR /app
 
-# Copy dependency files first (layer cache optimization)
+# Build tools needed for native deps (better-sqlite3 is in the dep tree)
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
+# Use the lockfile when present (reproducible); fall back to install if it was
+# git-ignored on the deploy host.
+RUN npm ci || npm install
 
-# Install production dependencies only
-RUN npm ci --omit=dev
-
-# Copy source code
-COPY server.js ./
-COPY src/ ./src/
+# Frontend sources + entries + config
+COPY tsconfig.json vite.config.ts index.html login.html ./
+COPY app/ ./app/
 COPY public/ ./public/
 
-# Create data directory for SQLite
+RUN npm run build   # -> /app/dist
+
+# ─────────────────────────────────────────────────────────────
+# Stage 2 — runtime image (backend + built dist only)
+# ─────────────────────────────────────────────────────────────
+FROM node:20-slim AS runtime
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm ci --omit=dev || npm install --omit=dev
+
+# Backend code + built frontend
+COPY server.js ./
+COPY src/ ./src/
+COPY --from=builder /app/dist ./dist
+
 RUN mkdir -p /app/data /app/logs
 
 # Run as non-root user for security

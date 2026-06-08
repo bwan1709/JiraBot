@@ -2,6 +2,10 @@ const { db } = require('../db');
 
 const PUBLIC_PATHS = ['/login.html', '/docx.bundle.js', '/favicon.ico'];
 const PUBLIC_API_PREFIXES = ['/api/login', '/api/register'];
+// Static build assets (Vite output: JS/CSS/fonts) must be reachable before login,
+// otherwise the unauthenticated login page can't load its bundles. These files are
+// not sensitive — actual data stays gated behind the authenticated /api routes.
+const PUBLIC_PATH_PREFIXES = ['/assets/'];
 
 // Cookie parser middleware
 function parseCookies(req, res, next) {
@@ -26,7 +30,11 @@ function disableCache(req, res, next) {
 
 // Authentication check
 function requireAuth(req, res, next) {
-    if (PUBLIC_PATHS.includes(req.path) || PUBLIC_API_PREFIXES.some(p => req.path.startsWith(p))) {
+    if (
+        PUBLIC_PATHS.includes(req.path) ||
+        PUBLIC_PATH_PREFIXES.some(p => req.path.startsWith(p)) ||
+        PUBLIC_API_PREFIXES.some(p => req.path.startsWith(p))
+    ) {
         return next();
     }
     const userId = req.cookies.user_id;

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const fs = require('fs').promises;
+const path = require('path');
 
 const { PORT, DATA_DIR, PUBLIC_DIR } = require('./src/config');
 const { initDb } = require('./src/db');
@@ -21,6 +22,13 @@ app.use(express.json());
 // Bind routes
 app.use('/api', authRoutes);
 app.use('/api', jiraRoutes);
+
+// SPA history fallback: any authenticated GET that isn't an /api call or a real
+// static file is handled by the React app (react-router). requireAuth already
+// redirected unauthenticated requests to /login.html before reaching here.
+app.get(/^(?!\/api\/).*/, (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
 
 async function start() {
     await fs.mkdir(DATA_DIR, { recursive: true });

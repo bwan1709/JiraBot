@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db, loadMonthData } = require('../db');
-const { jiraGet, jiraPost, jiraPut, searchAll, refreshMonthData } = require('../services/jira.service');
+const { jiraGet, jiraPost, jiraPut, searchAll, refreshMonthData, fetchLabels } = require('../services/jira.service');
 
 // GET /api/months — list available months from DB
 router.get('/months', (req, res) => {
@@ -9,6 +9,23 @@ router.get('/months', (req, res) => {
         const rows = db.prepare(`SELECT year_month FROM months WHERE user_id = ? ORDER BY year_month DESC`).all(req.user.id);
         res.json({ months: rows.map(r => r.year_month) });
     } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/labels — list all Jira labels (for the task label picker)
+router.get('/labels', async (req, res) => {
+    try {
+        if (!req.user.token || !req.user.cloud_id || !req.user.account_id || !req.user.base_url) {
+            return res.status(400).json({ error: 'JIRA_MISSING_INFO' });
+        }
+        const labels = await fetchLabels(req.user);
+        res.json({ labels });
+    } catch (e) {
+        console.error('❌ Lỗi tải labels:', e.message);
+        if (e.message === 'JIRA_401') {
+            return res.status(400).json({ error: 'JIRA_401' });
+        }
         res.status(500).json({ error: e.message });
     }
 });

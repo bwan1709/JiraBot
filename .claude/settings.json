@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -nE \"#[0-9a-fA-F]{3,6}|rgba\\\\\\(\" DailyTimeline.tsx)",
+      "Bash(grep -nE \"#[0-9a-fA-F]{3,6}\" TaskTable.tsx)",
+      "Bash(rm -f modals/ProfileModal.tsx modals/UsersMgmtModal.tsx components/UpdateBar.tsx)",
+      "Bash(grep -rl \"ProfileModal\\\\|UsersMgmtModal\\\\|UpdateBar\" /Users/minhcanh/Documents/Resource/JiraBot/app)",
+      "Bash(node -e \"require\\('./src/services/jira.service.js'\\); require\\('./src/routes/jira.routes.js'\\); console.log\\('backend require OK'\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(grep -rnoE \"width: [0-9]{3,}\" dashboard)",
+      "Bash(grep -n \"<Footer\\\\|</div>\\\\s*$\\\\|\\)\\)}\" app/dashboard/components/DailyTimeline.tsx)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(docker info *)"
+    ]
+  }
+}

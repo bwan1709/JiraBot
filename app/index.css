@@ -1,0 +1,52 @@
+/* Subtle route transition so page switches feel smooth instead of jumpy. */
+@keyframes jbFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.jb-page {
+  animation: jbFade 0.18s ease;
+}
+
+/* Timeline blocks: gentle hover lift. */
+.tl-block {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.tl-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+  filter: brightness(1.05);
+}
+
+/* Keep modals inside the viewport on phones (overrides fixed px widths). */
+@media (max-width: 575px) {
+  .ant-modal {
+    max-width: calc(100vw - 16px);
+    margin: 8px auto;
+    top: 12px;
+  }
+}
+
+/* Compact form: tighter vertical rhythm between fields (used in dense modals). */
+.compact-form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+/* Topbar user chip: subtle hover that reads on both light & dark themes. */
+.topbar-user {
+  transition: background 0.15s ease;
+}
+.topbar-user:hover {
+  background: rgba(128, 128, 128, 0.14);
+}
+
+/* Smoother scrollbars in the app shell. */
+* {
+  scrollbar-width: thin;
+}

@@ -401,10 +401,27 @@ async function refreshMonthData(user, yearMonth) {
     return result;
 }
 
+// Fetch every label available in the Jira instance (paginated via startAt/maxResults).
+async function fetchLabels(user) {
+    const all = [];
+    let startAt = 0;
+    const maxResults = 1000;
+    // Safety cap to avoid an unbounded loop if the API misbehaves.
+    for (let i = 0; i < 50; i++) {
+        const page = await jiraGet(user, `/label?startAt=${startAt}&maxResults=${maxResults}`);
+        const values = Array.isArray(page.values) ? page.values : [];
+        all.push(...values);
+        if (page.isLast === true || values.length === 0) break;
+        startAt += values.length;
+    }
+    return all;
+}
+
 module.exports = {
     jiraGet,
     jiraPost,
     jiraPut,
     searchAll,
-    refreshMonthData
+    refreshMonthData,
+    fetchLabels
 };
