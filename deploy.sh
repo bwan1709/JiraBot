@@ -3,7 +3,7 @@
 set -e
 
 echo "📦 Pulling latest code..."
-git pull origin main
+git pull origin dev
 
 echo "🔄 Rebuilding and restarting Docker container..."
 docker compose up -d --build
