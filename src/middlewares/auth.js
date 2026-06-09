@@ -1,11 +1,11 @@
 const { db } = require('../db');
 
 const PUBLIC_PATHS = ['/login.html', '/docx.bundle.js', '/favicon.ico', '/favicon.png'];
-const PUBLIC_API_PREFIXES = ['/api/login', '/api/register'];
+const PUBLIC_API_PREFIXES = ['/api/login', '/api/register', '/api/public/'];
 // Static build assets (Vite output: JS/CSS/fonts) must be reachable before login,
 // otherwise the unauthenticated login page can't load its bundles. These files are
 // not sensitive — actual data stays gated behind the authenticated /api routes.
-const PUBLIC_PATH_PREFIXES = ['/assets/'];
+const PUBLIC_PATH_PREFIXES = ['/assets/', '/share/'];
 
 // Cookie parser middleware
 function parseCookies(req, res, next) {

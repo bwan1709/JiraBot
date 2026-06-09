@@ -10,12 +10,15 @@ import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
 import PlansPage from './pages/PlansPage';
 import ProjectsPage from './pages/ProjectsPage';
+import NotesPage from './pages/NotesPage';
+import SharedNotePage from './pages/SharedNotePage';
 
 export default function DashboardApp() {
   return (
     <BrowserRouter>
       <DashboardProvider>
         <Routes>
+          <Route path="/share/:id" element={<SharedNotePage />} />
           <Route element={<Layout />}>
             <Route index element={<OverviewPage />} />
             <Route path="timeline" element={<TimelinePage />} />
@@ -24,6 +27,7 @@ export default function DashboardApp() {
             <Route path="users" element={<UsersPage />} />
             <Route path="plans" element={<PlansPage />} />
             <Route path="projects" element={<ProjectsPage />} />
+            <Route path="notes" element={<NotesPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

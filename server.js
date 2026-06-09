@@ -9,6 +9,7 @@ const { parseCookies, disableCache, requireAuth } = require('./src/middlewares/a
 
 const authRoutes = require('./src/routes/auth.routes');
 const jiraRoutes = require('./src/routes/jira.routes');
+const noteRoutes = require('./src/routes/note.routes');
 
 const app = express();
 
@@ -17,11 +18,13 @@ app.use(parseCookies);
 app.use(disableCache);
 app.use(requireAuth);
 app.use(express.static(PUBLIC_DIR));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Bind routes
 app.use('/api', authRoutes);
 app.use('/api', jiraRoutes);
+app.use('/api', noteRoutes);
 
 // SPA history fallback: any authenticated GET that isn't an /api call or a real
 // static file is handled by the React app (react-router). requireAuth already

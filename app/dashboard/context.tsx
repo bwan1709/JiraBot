@@ -182,6 +182,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   );
 
   const init = useCallback(async () => {
+    const isSharePage = window.location.pathname.startsWith('/share/');
+    if (isSharePage) {
+      try {
+        const me = await api.get<{ user: User }>('/api/me');
+        setUser(me.user);
+      } catch {
+        setUser(null);
+      }
+      setBooting(false);
+      return;
+    }
+
     try {
       const me = await api.get<{ user: User }>('/api/me');
       setUser(me.user);

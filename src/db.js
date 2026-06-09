@@ -136,6 +136,18 @@ function initDb() {
             name         TEXT NOT NULL,
             created_at   TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS notes (
+            id          TEXT PRIMARY KEY,
+            user_id     INTEGER NOT NULL,
+            title       TEXT,
+            content     TEXT,
+            drawing     TEXT,
+            image_url   TEXT,
+            created_at  TEXT NOT NULL,
+            expires_at  TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     `);
 
     const planInfo = db.pragma('table_info(monthly_plans)');
@@ -426,6 +438,30 @@ function deleteProject(id) {
     db.prepare(`DELETE FROM projects WHERE id = ?`).run(id);
 }
 
+function cleanupNotes() {
+    const now = new Date().toISOString();
+    db.prepare(`DELETE FROM notes WHERE expires_at <= ?`).run(now);
+}
+
+function saveNote(note) {
+    db.prepare(`
+        INSERT OR REPLACE INTO notes (id, user_id, title, content, drawing, image_url, created_at, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(note.id, note.user_id, note.title, note.content, note.drawing, note.image_url, note.created_at, note.expires_at);
+}
+
+function getNote(id) {
+    return db.prepare(`SELECT * FROM notes WHERE id = ?`).get(id);
+}
+
+function getUserNotes(userId) {
+    return db.prepare(`SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC`).all(userId);
+}
+
+function deleteNote(id, userId) {
+    db.prepare(`DELETE FROM notes WHERE id = ? AND user_id = ?`).run(id, userId);
+}
+
 module.exports = {
     db,
     initDb,
@@ -436,5 +472,10 @@ module.exports = {
     saveMonthlyPlan,
     getProjects,
     saveProject,
-    deleteProject
+    deleteProject,
+    cleanupNotes,
+    saveNote,
+    getNote,
+    getUserNotes,
+    deleteNote
 };

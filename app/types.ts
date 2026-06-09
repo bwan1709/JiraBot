@@ -123,3 +123,14 @@ export interface Transition {
 }
 
 export type TaskTabKey = 'todo' | 'inprogress' | 'done' | 'missing';
+
+export interface Note {
+  id: string;
+  user_id: number;
+  title: string;
+  content: string;
+  drawing: string | null;
+  image_url: string | null;
+  created_at: string;
+  expires_at: string;
+}
