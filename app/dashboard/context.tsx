@@ -14,7 +14,7 @@ import { App, Spin, Empty, Button, theme } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { api, bust } from '../api';
-import type { MonthData, Task, User } from '../types';
+import type { MonthData, Task, User, MonthlyPlan } from '../types';
 import { todayStr } from '../utils/format';
 
 const AddMonthModal = lazy(() => import('./modals/AddMonthModal'));
@@ -39,6 +39,7 @@ interface DashboardCtx {
   months: string[];
   currentMonth: string | null;
   data: MonthData | null;
+  monthlyPlan: MonthlyPlan | null;
   emptyMsg: { title: string; desc: string } | null;
   refreshing: boolean;
   exporting: boolean;
@@ -47,6 +48,7 @@ interface DashboardCtx {
   autoReloadMinutes: number;
   setAutoReloadMinutes: (m: number) => void;
   isAdmin: boolean;
+  isPmOrAdmin: boolean;
   switchMonth: (ym: string) => void;
   doRefresh: () => void;
   reloadTimeline: () => void;
@@ -78,6 +80,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [months, setMonths] = useState<string[]>([]);
   const [currentMonth, setCurrentMonth] = useState<string | null>(null);
   const [data, setData] = useState<MonthData | null>(null);
+  const [monthlyPlan, setMonthlyPlan] = useState<MonthlyPlan | null>(null);
   const [emptyMsg, setEmptyMsg] = useState<{ title: string; desc: string } | null>(null);
   const [booting, setBooting] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -125,6 +128,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           setEmptyMsg({ title: 'Lỗi tải dữ liệu', desc: e.message });
         }
       }
+      // Fetch monthly plan
+      try {
+        const planRes = await api.get<{ plan: MonthlyPlan | null }>(`/api/monthly-plans/${ym}?${bust()}`);
+        setMonthlyPlan(planRes.plan);
+      } catch {
+        setMonthlyPlan(null);
+      }
     },
     [applyData],
   );
@@ -150,6 +160,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const d = await api.post<MonthData>(`/api/refresh/${ym}`);
         applyData(d);
         message.success(`Cập nhật thành công! ${d.task_count} tasks · ${d.total_logged}h logged`);
+        // Fetch monthly plan after refresh
+        try {
+          const planRes = await api.get<{ plan: MonthlyPlan | null }>(`/api/monthly-plans/${ym}?${bust()}`);
+          setMonthlyPlan(planRes.plan);
+        } catch {
+          setMonthlyPlan(null);
+        }
         await reloadMonths(ym);
       } catch (e: any) {
         if (e.code === 'JIRA_401' || e.code === 'JIRA_MISSING_INFO') {
@@ -311,6 +328,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       months,
       currentMonth,
       data,
+      monthlyPlan,
       emptyMsg,
       refreshing,
       exporting,
@@ -319,6 +337,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       autoReloadMinutes,
       setAutoReloadMinutes,
       isAdmin: user?.role === 'admin',
+      isPmOrAdmin: user?.role === 'admin' || user?.role === 'pm',
       switchMonth,
       doRefresh,
       reloadTimeline,
@@ -358,6 +377,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       handleExport,
       logout,
       init,
+      monthlyPlan,
     ],
   );
 

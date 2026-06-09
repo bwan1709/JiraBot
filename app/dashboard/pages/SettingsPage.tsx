@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Card, Form, Input, Row, Col, Divider, Button, Typography, InputNumber, Space, Flex } from 'antd';
+import { App, Card, Form, Input, Row, Col, Divider, Button, Typography, InputNumber, Space, Flex, Select } from 'antd';
 import {
   QuestionCircleOutlined,
   SaveOutlined,
@@ -20,6 +20,14 @@ export default function SettingsPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [minutes, setMinutes] = useState(autoReloadMinutes);
+  const [jiraProjects, setJiraProjects] = useState<{ id: string; key: string; name: string }[]>([]);
+
+  useEffect(() => {
+    api
+      .get<{ projects: { id: string; key: string; name: string }[] }>('/api/projects')
+      .then((res) => setJiraProjects(res.projects || []))
+      .catch((err) => console.error(err));
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -41,6 +49,7 @@ export default function SettingsPage() {
           account_id: me.account_id || '',
           cloud_id: me.cloud_id || '',
           base_url: me.base_url || '',
+          projects: me.projects || [],
         });
       })
       .catch(() => { });
@@ -57,6 +66,7 @@ export default function SettingsPage() {
       account_id: (v.account_id || '').trim(),
       cloud_id: (v.cloud_id || '').trim(),
       base_url: (v.base_url || '').trim(),
+      projects: v.projects || [],
     };
     if (v.password) payload.password = v.password;
     setLoading(true);
@@ -126,6 +136,17 @@ export default function SettingsPage() {
                 <Col xs={24} sm={12}>
                   <Form.Item name="email" label="Email (không thể thay đổi)">
                     <Input disabled />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item name="projects" label="Dự án tham gia">
+                    <Select
+                      mode="multiple"
+                      allowClear
+                      placeholder="Chọn các dự án tham gia"
+                      options={jiraProjects.map((p) => ({ value: p.key, label: `${p.name} (${p.key})` }))}
+                      style={{ width: '100%' }}
+                    />
                   </Form.Item>
                 </Col>
               </Row>

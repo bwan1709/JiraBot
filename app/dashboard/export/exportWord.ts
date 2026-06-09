@@ -15,7 +15,8 @@ import {
 import type { IRunOptions } from 'docx';
 import type { MessageInstance } from 'antd/es/message/interface';
 import { api } from '../../api';
-import type { MonthData, User } from '../../types';
+import type { MonthData, User, MonthlyPlan } from '../../types';
+import { parseAndFilterTitle } from '../../utils/planFilter';
 
 /** Monthly Word report — faithful port of the original public/index.html exportWord(). */
 export async function exportWord(
@@ -34,6 +35,35 @@ export async function exportWord(
     onData(data);
 
     const [y, m] = currentMonth.split('-');
+
+    // ── Fetch NEXT month's plan for the plan section ───────────────────────
+    const nextMonthDate = new Date(parseInt(y), parseInt(m) - 1 + 1, 1);
+    const nextY = nextMonthDate.getFullYear();
+    const nextM = String(nextMonthDate.getMonth() + 1).padStart(2, '0');
+    const nextYm = `${nextY}-${nextM}`;
+
+    let nextPlanTitles: string[] = [];
+    try {
+      const planRes = await api.get<{ plan: MonthlyPlan | null }>(`/api/monthly-plans/${nextYm}`);
+      const plan = planRes.plan;
+      if (plan) {
+        const userProjects = new Set((user?.projects || []).map(p => p.trim().toUpperCase()));
+        if (plan.items && plan.items.length > 0) {
+          // Filter structured items directly by comparing project_key with user's projects
+          nextPlanTitles = plan.items
+            .filter((item) => userProjects.size === 0 || userProjects.has(item.project_key.toUpperCase()))
+            .map((item) => item.content)
+            .filter(Boolean);
+        } else if (plan.title) {
+          // Fallback to parsing the legacy title string
+          const planProjects = plan.projects || [];
+          const parsed = parseAndFilterTitle(plan.title, user?.projects, planProjects, false);
+          nextPlanTitles = parsed.map((item) => item.text).filter(Boolean);
+        }
+      }
+    } catch {
+      // If next month's plan doesn't exist, leave rows blank
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────
     const R = (t: unknown, o: IRunOptions = {}) =>
@@ -191,13 +221,19 @@ export async function exportWord(
       ],
     });
 
+    // Fill up to 3 plan rows with next month's titles; pad the rest with blank rows
+    const planRowTexts = [
+      nextPlanTitles[0] ?? '',
+      nextPlanTitles[1] ?? '',
+      nextPlanTitles[2] ?? '',
+    ];
     const planTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         new TableRow({ children: [mkSpanCell('B/KẾ HOẠCH THÁNG', 1)] }),
-        new TableRow({ children: [mkCell([R('')])] }),
-        new TableRow({ children: [mkCell([R('')])] }),
-        new TableRow({ children: [mkCell([R('')])] }),
+        new TableRow({ children: [mkCell([R(planRowTexts[0])])] }),
+        new TableRow({ children: [mkCell([R(planRowTexts[1])])] }),
+        new TableRow({ children: [mkCell([R(planRowTexts[2])])] }),
       ],
     });
 

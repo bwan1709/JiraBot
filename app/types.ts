@@ -61,16 +61,32 @@ export interface User {
   id: number;
   email: string;
   full_name: string;
-  role: string; // 'admin' | 'client'
+  role: 'admin' | 'pm' | 'client' | string;
   department: string;
   base_url?: string;
   job_title: string;
+  projects?: string[];
   // present only when fetched with ?full=1 or from /api/users
   token?: string;
   account_id?: string;
   cloud_id?: string;
   email_jira?: string;
   created_at?: string;
+}
+
+export interface MonthlyPlanItem {
+  content: string;
+  project_key: string;
+}
+
+export interface MonthlyPlan {
+  year_month: string;
+  projects: string[];
+  title?: string;
+  description?: string;
+  created_by?: number;
+  created_at?: string;
+  items?: MonthlyPlanItem[];
 }
 
 export interface DailyTask {

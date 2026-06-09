@@ -43,6 +43,7 @@ export default function UsersPage() {
   const { user: currentUser, isAdmin, reloadUser } = useDashboard();
   const [form] = Form.useForm();
   const [users, setUsers] = useState<User[]>([]);
+  const [jiraProjects, setJiraProjects] = useState<{ id: string; key: string; name: string }[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
@@ -50,7 +51,7 @@ export default function UsersPage() {
   const reset = () => {
     setEditingId(null);
     form.resetFields();
-    form.setFieldsValue({ role: 'client' });
+    form.setFieldsValue({ role: 'client', projects: [] });
   };
 
   const loadUsers = async () => {
@@ -69,6 +70,9 @@ export default function UsersPage() {
     if (isAdmin) {
       reset();
       loadUsers();
+      api.get<{ projects: { id: string; key: string; name: string }[] }>('/api/projects')
+        .then(res => setJiraProjects(res.projects || []))
+        .catch(err => console.error(err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
@@ -88,6 +92,7 @@ export default function UsersPage() {
       account_id: u.account_id || '',
       cloud_id: u.cloud_id || '',
       base_url: u.base_url || '',
+      projects: u.projects || [],
     });
   };
 
@@ -103,6 +108,7 @@ export default function UsersPage() {
       role: v.role,
       department: v.department.trim(),
       job_title: (v.job_title || '').trim(),
+      projects: v.projects || [],
     };
     if (!editingId || (v.password && v.password.trim() !== '')) {
       payload.password = v.password || 'ilovecds';
@@ -142,7 +148,31 @@ export default function UsersPage() {
     {
       title: 'Quyền',
       dataIndex: 'role',
-      render: (v) => <Tag color={v === 'admin' ? 'green' : 'default'}>{v === 'admin' ? 'Admin' : 'Client'}</Tag>,
+      render: (v) => {
+        let label = 'Client';
+        let color = 'default';
+        if (v === 'admin') {
+          label = 'Admin';
+          color = 'green';
+        } else if (v === 'pm') {
+          label = 'PM';
+          color = 'purple';
+        }
+        return <Tag color={color}>{label}</Tag>;
+      },
+    },
+    {
+      title: 'Dự án tham gia',
+      dataIndex: 'projects',
+      render: (projs: string[]) => (
+        <Space size={2} wrap style={{ maxWidth: 200 }}>
+          {Array.isArray(projs) && projs.length > 0 ? (
+            projs.map((p) => <Tag color="blue" key={p}>{p}</Tag>)
+          ) : (
+            <span style={{ color: '#aaa' }}>—</span>
+          )}
+        </Space>
+      ),
     },
     {
       title: 'Chức danh / Bộ phận',
@@ -242,8 +272,20 @@ export default function UsersPage() {
                     <Select
                       options={[
                         { value: 'client', label: 'Client' },
+                        { value: 'pm', label: 'PM' },
                         { value: 'admin', label: 'Admin' },
                       ]}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item name="projects" label="Dự án tham gia">
+                    <Select
+                      mode="multiple"
+                      allowClear
+                      placeholder="Chọn các dự án tham gia"
+                      options={jiraProjects.map((p) => ({ value: p.key, label: `${p.name} (${p.key})` }))}
+                      style={{ width: '100%' }}
                     />
                   </Form.Item>
                 </Col>

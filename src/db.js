@@ -106,6 +106,50 @@ function initDb() {
         console.log('  ⚙️ Added job_title column to users table');
     }
 
+    const hasProjects = tableInfo.some(col => col.name === 'projects');
+    if (!hasProjects) {
+        db.exec('ALTER TABLE users ADD COLUMN projects TEXT');
+        console.log('  ⚙️ Added projects column to users table');
+    }
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS monthly_plans (
+            year_month   TEXT PRIMARY KEY,
+            projects     TEXT NOT NULL,
+            title        TEXT,
+            description  TEXT,
+            created_by   INTEGER,
+            created_at   TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS monthly_plan_items (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            year_month   TEXT NOT NULL,
+            content      TEXT NOT NULL,
+            project_key  TEXT NOT NULL,
+            FOREIGN KEY (year_month) REFERENCES monthly_plans(year_month) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS projects (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            key          TEXT UNIQUE NOT NULL,
+            name         TEXT NOT NULL,
+            created_at   TEXT
+        );
+    `);
+
+    const planInfo = db.pragma('table_info(monthly_plans)');
+    const hasTitle = planInfo.some(col => col.name === 'title');
+    if (!hasTitle) {
+        db.exec('ALTER TABLE monthly_plans ADD COLUMN title TEXT');
+        console.log('  ⚙️ Added title column to monthly_plans table');
+    }
+    const hasDesc = planInfo.some(col => col.name === 'description');
+    if (!hasDesc) {
+        db.exec('ALTER TABLE monthly_plans ADD COLUMN description TEXT');
+        console.log('  ⚙️ Added description column to monthly_plans table');
+    }
+
     // Seed default admin user from .env if table is empty
     const defaultEmail    = process.env.ADMIN_EMAIL    || 'admin@jirabot.local';
     const defaultPassword = process.env.ADMIN_PASSWORD || 'ilovecds';
@@ -319,9 +363,78 @@ function loadMonthData(userId, ym) {
     };
 }
 
+function getMonthlyPlan(ym) {
+    const row = db.prepare(`SELECT * FROM monthly_plans WHERE year_month = ?`).get(ym);
+    if (!row) return null;
+    const items = db.prepare(`SELECT * FROM monthly_plan_items WHERE year_month = ?`).all(ym);
+    return {
+        year_month: row.year_month,
+        projects: JSON.parse(row.projects || '[]'),
+        title: row.title || '',
+        description: row.description || '',
+        created_by: row.created_by,
+        created_at: row.created_at,
+        items: items.map(it => ({ content: it.content, project_key: it.project_key }))
+    };
+}
+
+function getMonthlyPlans() {
+    const rows = db.prepare(`SELECT * FROM monthly_plans ORDER BY year_month DESC`).all();
+    return rows.map(row => {
+        const items = db.prepare(`SELECT * FROM monthly_plan_items WHERE year_month = ?`).all(row.year_month);
+        return {
+            year_month: row.year_month,
+            projects: JSON.parse(row.projects || '[]'),
+            title: row.title || '',
+            description: row.description || '',
+            created_by: row.created_by,
+            created_at: row.created_at,
+            items: items.map(it => ({ content: it.content, project_key: it.project_key }))
+        };
+    });
+}
+
+function saveMonthlyPlan(ym, projects, title, description, userId, items = []) {
+    const run = db.transaction(() => {
+        db.prepare(`
+            INSERT OR REPLACE INTO monthly_plans (year_month, projects, title, description, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).run(ym, JSON.stringify(projects), title, description, userId, new Date().toISOString());
+
+        db.prepare(`DELETE FROM monthly_plan_items WHERE year_month = ?`).run(ym);
+        const insertItem = db.prepare(`INSERT INTO monthly_plan_items (year_month, content, project_key) VALUES (?, ?, ?)`);
+        for (const item of items) {
+            insertItem.run(ym, item.content, item.project_key);
+        }
+    });
+    run();
+}
+
+function getProjects() {
+    return db.prepare(`SELECT * FROM projects ORDER BY key ASC`).all();
+}
+
+function saveProject(key, name, id = null) {
+    if (id) {
+        db.prepare(`UPDATE projects SET key = ?, name = ? WHERE id = ?`).run(key, name, id);
+    } else {
+        db.prepare(`INSERT INTO projects (key, name, created_at) VALUES (?, ?, ?)`).run(key, name, new Date().toISOString());
+    }
+}
+
+function deleteProject(id) {
+    db.prepare(`DELETE FROM projects WHERE id = ?`).run(id);
+}
+
 module.exports = {
     db,
     initDb,
     saveMonthData,
-    loadMonthData
+    loadMonthData,
+    getMonthlyPlan,
+    getMonthlyPlans,
+    saveMonthlyPlan,
+    getProjects,
+    saveProject,
+    deleteProject
 };

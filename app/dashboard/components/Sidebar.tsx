@@ -8,6 +8,8 @@ import {
   UnorderedListOutlined,
   TeamOutlined,
   SettingOutlined,
+  CalendarOutlined,
+  ProjectOutlined,
 } from '@ant-design/icons';
 import { useDashboard } from '../context';
 
@@ -17,7 +19,7 @@ const { Text } = Typography;
 /** Logo + nav menu — reused inside the desktop Sider and the mobile Drawer. */
 export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { token } = theme.useToken();
-  const { isAdmin } = useDashboard();
+  const { isAdmin, isPmOrAdmin } = useDashboard();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -28,6 +30,8 @@ export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: bool
     { key: '/tasks', icon: <UnorderedListOutlined />, label: 'Danh sách Tasks' },
     { type: 'divider' },
     { key: 'group-manage', type: 'group', label: collapsed ? '' : 'HỆ THỐNG' },
+    { key: '/plans', icon: <CalendarOutlined />, label: isPmOrAdmin ? 'Quản lý kế hoạch' : 'Kế hoạch tháng' },
+    ...(isAdmin ? [{ key: '/projects', icon: <ProjectOutlined />, label: 'Quản lý dự án' }] : []),
     ...(isAdmin ? [{ key: '/users', icon: <TeamOutlined />, label: 'Quản lý Users' }] : []),
     { key: '/settings', icon: <SettingOutlined />, label: 'Cài đặt cá nhân' },
   ];

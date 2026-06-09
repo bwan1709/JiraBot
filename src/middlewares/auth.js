@@ -72,9 +72,18 @@ function requireAdmin(req, res, next) {
     res.status(403).json({ error: 'Quyền truy cập bị từ chối. Chỉ dành cho Admin.' });
 }
 
+// PM or Admin permission check
+function requirePmOrAdmin(req, res, next) {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'pm')) {
+        return next();
+    }
+    res.status(403).json({ error: 'Quyền truy cập bị từ chối. Chỉ dành cho PM hoặc Admin.' });
+}
+
 module.exports = {
     parseCookies,
     disableCache,
     requireAuth,
-    requireAdmin
+    requireAdmin,
+    requirePmOrAdmin
 };

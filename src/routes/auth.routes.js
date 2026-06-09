@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db');
+const { db, getProjects, saveProject, deleteProject } = require('../db');
 const { requireAdmin } = require('../middlewares/auth');
 
 // POST /api/login — Login handler
@@ -80,7 +80,8 @@ router.get('/me', (req, res) => {
         role: u.role,
         department: u.department,
         base_url: u.base_url,
-        job_title: u.job_title || ''
+        job_title: u.job_title || '',
+        projects: JSON.parse(u.projects || '[]')
     };
     if (full) {
         payload.token = u.token || '';
@@ -94,7 +95,7 @@ router.get('/me', (req, res) => {
 // PUT /api/profile — Update own profile (any authenticated user)
 router.put('/profile', (req, res) => {
     try {
-        const { full_name, department, job_title, email_jira, token, account_id, cloud_id, base_url, password } = req.body;
+        const { full_name, department, job_title, email_jira, token, account_id, cloud_id, base_url, password, projects } = req.body;
 
         if (!full_name || !full_name.trim()) {
             return res.status(400).json({ error: 'Vui lòng nhập Họ & Tên.' });
@@ -111,7 +112,8 @@ router.put('/profile', (req, res) => {
             token: (token || '').trim(),
             account_id: (account_id || '').trim(),
             cloud_id: (cloud_id || '').trim(),
-            base_url: (base_url || '').trim()
+            base_url: (base_url || '').trim(),
+            projects: Array.isArray(projects) ? JSON.stringify(projects) : '[]'
         };
         if (password) fields.password = password;
 
@@ -130,8 +132,12 @@ router.put('/profile', (req, res) => {
 // GET /api/users — List all users (Admin only)
 router.get('/users', requireAdmin, (req, res) => {
     try {
-        const users = db.prepare(`SELECT id, email, token, cloud_id, account_id, base_url, full_name, role, department, job_title, created_at FROM users ORDER BY id ASC`).all();
-        res.json({ users });
+        const users = db.prepare(`SELECT id, email, token, cloud_id, account_id, base_url, full_name, role, department, job_title, projects, created_at FROM users ORDER BY id ASC`).all();
+        const parsedUsers = users.map(u => ({
+            ...u,
+            projects: JSON.parse(u.projects || '[]')
+        }));
+        res.json({ users: parsedUsers });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -140,7 +146,7 @@ router.get('/users', requireAdmin, (req, res) => {
 // POST /api/users — Create new user (Admin only)
 router.post('/users', requireAdmin, (req, res) => {
     try {
-        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title } = req.body;
+        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title, projects } = req.body;
         if (!email || !token || !cloud_id || !account_id || !base_url) {
             return res.status(400).json({ error: 'Thiếu các thông tin bắt buộc (email, token, cloud_id, account_id, base_url)' });
         }
@@ -149,9 +155,9 @@ router.post('/users', requireAdmin, (req, res) => {
         const userRole = role || 'client';
 
         const info = db.prepare(`
-            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, job_title || null, new Date().toISOString());
+            INSERT INTO users (email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title, projects, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, job_title || null, Array.isArray(projects) ? JSON.stringify(projects) : '[]', new Date().toISOString());
 
         res.json({ success: true, userId: info.lastInsertRowId });
     } catch (e) {
@@ -166,7 +172,7 @@ router.post('/users', requireAdmin, (req, res) => {
 router.put('/users/:id', requireAdmin, (req, res) => {
     try {
         const { id } = req.params;
-        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title } = req.body;
+        const { email, password, token, cloud_id, account_id, base_url, full_name, role, department, job_title, projects } = req.body;
         if (!email || !token || !cloud_id || !account_id || !base_url) {
             return res.status(400).json({ error: 'Thiếu các thông tin bắt buộc' });
         }
@@ -179,12 +185,13 @@ router.put('/users/:id', requireAdmin, (req, res) => {
         // Handle password update: if not provided or empty, keep existing password
         const pwd = (password && password.trim() !== '') ? password : existing.password;
         const userRole = role || existing.role;
+        const projStr = Array.isArray(projects) ? JSON.stringify(projects) : '[]';
 
         db.prepare(`
             UPDATE users 
-            SET email = ?, password = ?, token = ?, cloud_id = ?, account_id = ?, base_url = ?, full_name = ?, role = ?, department = ?, job_title = ?
+            SET email = ?, password = ?, token = ?, cloud_id = ?, account_id = ?, base_url = ?, full_name = ?, role = ?, department = ?, job_title = ?, projects = ?
             WHERE id = ?
-        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, job_title || null, id);
+        `).run(email, pwd, token, cloud_id, account_id, base_url, full_name || null, userRole, department || null, job_title || null, projStr, id);
 
         res.json({ success: true });
     } catch (e) {
@@ -206,6 +213,62 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
         }
 
         db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/projects — list all projects
+router.get('/projects', (req, res) => {
+    try {
+        const projects = getProjects();
+        res.json({ projects });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/projects — create new project (Admin only)
+router.post('/projects', requireAdmin, (req, res) => {
+    try {
+        const { key, name } = req.body;
+        if (!key || !name) {
+            return res.status(400).json({ error: 'Thiếu mã dự án hoặc tên dự án.' });
+        }
+        saveProject(key.trim().toUpperCase(), name.trim());
+        res.json({ success: true });
+    } catch (e) {
+        if (e.message.includes('UNIQUE constraint failed')) {
+            return res.status(400).json({ error: 'Mã dự án này đã tồn tại.' });
+        }
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// PUT /api/projects/:id — update project (Admin only)
+router.put('/projects/:id', requireAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        const { key, name } = req.body;
+        if (!key || !name) {
+            return res.status(400).json({ error: 'Thiếu thông tin cập nhật.' });
+        }
+        saveProject(key.trim().toUpperCase(), name.trim(), id);
+        res.json({ success: true });
+    } catch (e) {
+        if (e.message.includes('UNIQUE constraint failed')) {
+            return res.status(400).json({ error: 'Mã dự án này đã tồn tại.' });
+        }
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// DELETE /api/projects/:id — delete project (Admin only)
+router.delete('/projects/:id', requireAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        deleteProject(id);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });

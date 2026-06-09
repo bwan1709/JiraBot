@@ -8,6 +8,8 @@ import TimelinePage from './pages/TimelinePage';
 import TasksPage from './pages/TasksPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
+import PlansPage from './pages/PlansPage';
+import ProjectsPage from './pages/ProjectsPage';
 
 export default function DashboardApp() {
   return (
@@ -20,6 +22,8 @@ export default function DashboardApp() {
             <Route path="tasks" element={<TasksPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="plans" element={<PlansPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

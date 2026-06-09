@@ -17,6 +17,7 @@ const fallback = (
 
 export default function OverviewPage() {
   const { data, currentMonth, selectTimelineDate } = useDashboard();
+
   return (
     <>
       <PageHeader

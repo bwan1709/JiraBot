@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { db, loadMonthData } = require('../db');
+const { db, loadMonthData, getMonthlyPlan, getMonthlyPlans, saveMonthlyPlan } = require('../db');
+const { requirePmOrAdmin } = require('../middlewares/auth');
 const { jiraGet, jiraPost, jiraPut, searchAll, refreshMonthData, fetchLabels } = require('../services/jira.service');
 
 // GET /api/months — list available months from DB
@@ -274,6 +275,59 @@ router.get('/daily-report', async (req, res) => {
         res.json({ date, tasks, worklogs });
     } catch (e) {
         console.error('❌ Lỗi tải báo cáo ngày:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/jira/projects — fetch all projects from Jira workspace
+router.get('/jira/projects', async (req, res) => {
+    try {
+        if (!req.user.token || !req.user.cloud_id || !req.user.account_id || !req.user.base_url) {
+            return res.json({ projects: [] });
+        }
+        const list = await jiraGet(req.user, '/project');
+        const projects = (Array.isArray(list) ? list : []).map(p => ({
+            id: p.id,
+            key: p.key,
+            name: p.name
+        }));
+        res.json({ projects });
+    } catch (e) {
+        console.error('❌ Lỗi tải dự án Jira:', e.message);
+        res.json({ projects: [] }); // Fallback to empty instead of crashing
+    }
+});
+
+// GET /api/monthly-plans — list all monthly plans
+router.get('/monthly-plans', (req, res) => {
+    try {
+        const plans = getMonthlyPlans();
+        res.json({ plans });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/monthly-plans/:yearMonth — get plan for a specific month
+router.get('/monthly-plans/:yearMonth', (req, res) => {
+    try {
+        const plan = getMonthlyPlan(req.params.yearMonth);
+        res.json({ plan });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/monthly-plans — create or update monthly plan (PM/Admin only)
+router.post('/monthly-plans', requirePmOrAdmin, (req, res) => {
+    try {
+        const { year_month, projects, title, description, items } = req.body;
+        if (!year_month || !Array.isArray(projects)) {
+            return res.status(400).json({ error: 'Thiếu thông tin tháng hoặc danh sách dự án' });
+        }
+        saveMonthlyPlan(year_month, projects, title || '', description || '', req.user.id, items || []);
+        res.json({ success: true });
+    } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
