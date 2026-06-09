@@ -17,7 +17,7 @@ import {
   ClockCircleOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { monthTabLabel } from '../../utils/format';
 import { useThemeMode } from '../../theme';
 import { useDashboard } from '../context';
@@ -37,8 +37,11 @@ function Topbar({ collapsed, isMobile, onToggle }: Props) {
   const { isDark, toggle } = useThemeMode();
   const screens = useBreakpoint();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, months, currentMonth, data, exporting, switchMonth, openAddMonth, handleExport, logout } =
     useDashboard();
+
+  const showMonthSelector = !['/notes', '/markdowns', '/settings', '/projects', '/users'].includes(pathname);
 
   // On tiny screens (< sm) the export + theme controls fold into the avatar menu
   // to keep the topbar clean.
@@ -125,21 +128,25 @@ function Topbar({ collapsed, isMobile, onToggle }: Props) {
           }
           onClick={onToggle}
         />
-        {screens.sm && vDivider}
-        {screens.sm && (
-          <CalendarOutlined style={{ color: token.colorTextTertiary, fontSize: 16 }} />
+        {showMonthSelector && (
+          <>
+            {screens.sm && vDivider}
+            {screens.sm && (
+              <CalendarOutlined style={{ color: token.colorTextTertiary, fontSize: 16 }} />
+            )}
+            <Select
+              value={currentMonth ?? undefined}
+              onChange={switchMonth}
+              placeholder="Tháng"
+              style={compact ? { flex: 1, minWidth: 0 } : { width: 116 }}
+              options={months.map((m) => ({ value: m, label: monthTabLabel(m) }))}
+              notFoundContent="Chưa có tháng"
+            />
+            <Tooltip title="Thêm tháng">
+              <Button type="primary" icon={<PlusOutlined />} onClick={openAddMonth} />
+            </Tooltip>
+          </>
         )}
-        <Select
-          value={currentMonth ?? undefined}
-          onChange={switchMonth}
-          placeholder="Tháng"
-          style={compact ? { flex: 1, minWidth: 0 } : { width: 116 }}
-          options={months.map((m) => ({ value: m, label: monthTabLabel(m) }))}
-          notFoundContent="Chưa có tháng"
-        />
-        <Tooltip title="Thêm tháng">
-          <Button type="primary" icon={<PlusOutlined />} onClick={openAddMonth} />
-        </Tooltip>
       </Flex>
 
       {/* ── Right: status + actions + theme + user ── */}

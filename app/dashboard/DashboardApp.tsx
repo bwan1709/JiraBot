@@ -12,6 +12,8 @@ import PlansPage from './pages/PlansPage';
 import ProjectsPage from './pages/ProjectsPage';
 import NotesPage from './pages/NotesPage';
 import SharedNotePage from './pages/SharedNotePage';
+import MarkdownPage from './pages/MarkdownPage';
+import SharedMarkdownPage from './pages/SharedMarkdownPage';
 
 export default function DashboardApp() {
   return (
@@ -19,6 +21,7 @@ export default function DashboardApp() {
       <DashboardProvider>
         <Routes>
           <Route path="/share/:id" element={<SharedNotePage />} />
+          <Route path="/share-md/:id" element={<SharedMarkdownPage />} />
           <Route element={<Layout />}>
             <Route index element={<OverviewPage />} />
             <Route path="timeline" element={<TimelinePage />} />
@@ -28,6 +31,7 @@ export default function DashboardApp() {
             <Route path="plans" element={<PlansPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="notes" element={<NotesPage />} />
+            <Route path="markdowns" element={<MarkdownPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

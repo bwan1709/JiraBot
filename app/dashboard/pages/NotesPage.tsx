@@ -29,7 +29,9 @@ import {
   SyncOutlined,
   CheckCircleOutlined,
   InfoCircleOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  CopyOutlined,
+  CheckOutlined
 } from '@ant-design/icons';
 import { api, bust } from '../../api';
 import type { Note } from '../../types';
@@ -266,6 +268,194 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ open, onClose, onSave, init
     </Modal>
   );
 };
+
+const CodeBlock: React.FC<{ content: string; language?: string }> = ({ content, language }) => {
+  const [hovered, setHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      message.success('Đã sao chép mã nguồn!');
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div 
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ position: 'relative', margin: '12px 0' }}
+    >
+      {hovered && (
+        <Button
+          size="small"
+          type="default"
+          style={{ 
+            position: 'absolute', 
+            top: 8, 
+            right: 8, 
+            zIndex: 10,
+            backgroundColor: copied ? '#10b981' : '#ffffff',
+            borderColor: copied ? '#10b981' : '#cbd5e1',
+            color: copied ? '#ffffff' : '#475569',
+            fontSize: 11
+          }}
+          icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+          onClick={handleCopy}
+        >
+          {copied ? 'Đã chép' : 'Sao chép'}
+        </Button>
+      )}
+      {language && (
+        <div style={{
+          position: 'absolute',
+          bottom: 8,
+          right: 12,
+          fontSize: 10,
+          color: '#64748b',
+          textTransform: 'uppercase',
+          fontWeight: 'bold',
+          pointerEvents: 'none'
+        }}>
+          {language}
+        </div>
+      )}
+      <pre style={{
+        padding: '12px 16px',
+        backgroundColor: '#f1f5f9',
+        color: '#334155',
+        borderRadius: 8,
+        fontFamily: 'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
+        fontSize: 13,
+        overflowX: 'auto',
+        margin: 0,
+        lineHeight: 1.5,
+        border: '1px solid #cbd5e1',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all'
+      }}>
+        <code>{content}</code>
+      </pre>
+    </div>
+  );
+};
+
+const InlineCode: React.FC<{ content: string }> = ({ content }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      message.success(`Đã sao chép "${content}"!`);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Tooltip title={copied ? 'Đã sao chép!' : 'Click để sao chép'}>
+      <code 
+        onClick={handleCopy}
+        style={{ 
+          fontFamily: 'SFMono-Medium, Consolas, Monaco, monospace',
+          backgroundColor: '#f1f5f9',
+          color: '#e11d48',
+          padding: '2px 6px',
+          borderRadius: 4,
+          fontSize: '0.875em',
+          border: '1px solid #cbd5e1',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          display: 'inline-block',
+          verticalAlign: 'middle',
+          margin: '0 2px'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#e2e8f0';
+          e.currentTarget.style.borderColor = '#94a3b8';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#f1f5f9';
+          e.currentTarget.style.borderColor = '#cbd5e1';
+        }}
+      >
+        {content}
+      </code>
+    </Tooltip>
+  );
+};
+
+function parseContent(text: string): React.ReactNode[] {
+  if (!text) return [];
+  const parts = text.split(/```/g);
+  const elements: React.ReactNode[] = [];
+  
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 1) {
+      const codeContent = parts[i];
+      const match = codeContent.match(/^([a-zA-Z0-9+#-]+)?\n([\s\S]*)$/);
+      if (match) {
+        elements.push(
+          <CodeBlock 
+            key={`cb-triple-${i}`} 
+            content={match[2].trimEnd()} 
+            language={match[1] || 'code'} 
+          />
+        );
+      } else {
+        elements.push(
+          <CodeBlock 
+            key={`cb-triple-${i}`} 
+            content={codeContent.trimEnd()} 
+          />
+        );
+      }
+    } else {
+      const textPart = parts[i];
+      const subParts = textPart.split(/`/g);
+      
+      for (let j = 0; j < subParts.length; j++) {
+        if (j % 2 === 1) {
+          const content = subParts[j];
+          if (content.includes('\n')) {
+            elements.push(
+              <CodeBlock 
+                key={`cb-single-${i}-${j}`} 
+                content={content} 
+              />
+            );
+          } else {
+            elements.push(
+              <InlineCode 
+                key={`code-inline-${i}-${j}`} 
+                content={content} 
+              />
+            );
+          }
+        } else {
+          const normalText = subParts[j];
+          if (normalText) {
+            const boldParts = normalText.split(/(\*\*[^*]+\*\*)/g);
+            const parsed = boldParts.map((bPart, bIdx) => {
+              if (bPart.startsWith('**') && bPart.endsWith('**')) {
+                return <strong key={`bold-${i}-${j}-${bIdx}`}>{bPart.slice(2, -2)}</strong>;
+              }
+              return bPart;
+            });
+            
+            elements.push(
+              <span key={`text-${i}-${j}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {parsed}
+              </span>
+            );
+          }
+        }
+      }
+    }
+  }
+  return elements;
+}
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -710,6 +900,31 @@ export default function NotesPage() {
                   autoSize={{ minRows: 8, maxRows: 15 }}
                   style={{ paddingLeft: 0, fontSize: 15, lineHeight: 1.6 }}
                 />
+
+                {/* Live Preview */}
+                {content && (
+                  <div style={{ marginTop: 12, borderTop: '1px dashed #cbd5e1', paddingTop: 12 }}>
+                    <Text type="secondary" strong style={{ fontSize: 12, display: 'block', marginBottom: 8, color: '#64748b' }}>
+                      XEM TRƯỚC GIAO DIỆN CHIA SẺ
+                    </Text>
+                    <div 
+                      style={{ 
+                        fontSize: 15, 
+                        lineHeight: 1.7, 
+                        color: '#334155', 
+                        backgroundColor: '#f8fafc',
+                        padding: '12px 16px',
+                        borderRadius: 8,
+                        border: '1px solid #cbd5e1',
+                        maxHeight: '250px',
+                        overflowY: 'auto',
+                        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      {parseContent(content)}
+                    </div>
+                  </div>
+                )}
 
                 {/* Media Actions */}
                 <Flex gap={12} wrap style={{ padding: '12px 0', borderTop: '1px solid #f1f5f9' }}>

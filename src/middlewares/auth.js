@@ -5,7 +5,7 @@ const PUBLIC_API_PREFIXES = ['/api/login', '/api/register', '/api/public/'];
 // Static build assets (Vite output: JS/CSS/fonts) must be reachable before login,
 // otherwise the unauthenticated login page can't load its bundles. These files are
 // not sensitive — actual data stays gated behind the authenticated /api routes.
-const PUBLIC_PATH_PREFIXES = ['/assets/', '/share/'];
+const PUBLIC_PATH_PREFIXES = ['/assets/', '/share/', '/share-md/'];
 
 // Cookie parser middleware
 function parseCookies(req, res, next) {

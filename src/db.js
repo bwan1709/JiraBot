@@ -148,6 +148,16 @@ function initDb() {
             expires_at  TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS markdowns (
+            id          TEXT PRIMARY KEY,
+            user_id     INTEGER NOT NULL,
+            title       TEXT,
+            content     TEXT,
+            created_at  TEXT NOT NULL,
+            expires_at  TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     `);
 
     const planInfo = db.pragma('table_info(monthly_plans)');
@@ -462,6 +472,30 @@ function deleteNote(id, userId) {
     db.prepare(`DELETE FROM notes WHERE id = ? AND user_id = ?`).run(id, userId);
 }
 
+function cleanupMarkdowns() {
+    const now = new Date().toISOString();
+    db.prepare(`DELETE FROM markdowns WHERE expires_at <= ?`).run(now);
+}
+
+function saveMarkdown(md) {
+    db.prepare(`
+        INSERT OR REPLACE INTO markdowns (id, user_id, title, content, created_at, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `).run(md.id, md.user_id, md.title, md.content, md.created_at, md.expires_at);
+}
+
+function getMarkdown(id) {
+    return db.prepare(`SELECT * FROM markdowns WHERE id = ?`).get(id);
+}
+
+function getUserMarkdowns(userId) {
+    return db.prepare(`SELECT * FROM markdowns WHERE user_id = ? ORDER BY created_at DESC`).all(userId);
+}
+
+function deleteMarkdown(id, userId) {
+    db.prepare(`DELETE FROM markdowns WHERE id = ? AND user_id = ?`).run(id, userId);
+}
+
 module.exports = {
     db,
     initDb,
@@ -477,5 +511,10 @@ module.exports = {
     saveNote,
     getNote,
     getUserNotes,
-    deleteNote
+    deleteNote,
+    cleanupMarkdowns,
+    saveMarkdown,
+    getMarkdown,
+    getUserMarkdowns,
+    deleteMarkdown
 };

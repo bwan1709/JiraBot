@@ -182,7 +182,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   );
 
   const init = useCallback(async () => {
-    const isSharePage = window.location.pathname.startsWith('/share/');
+    const isSharePage = window.location.pathname.startsWith('/share/') || window.location.pathname.startsWith('/share-md/');
     if (isSharePage) {
       try {
         const me = await api.get<{ user: User }>('/api/me');

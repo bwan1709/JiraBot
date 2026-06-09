@@ -134,3 +134,13 @@ export interface Note {
   created_at: string;
   expires_at: string;
 }
+
+export interface MarkdownDoc {
+  id: string;
+  user_id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  expires_at: string;
+}
+

@@ -9,19 +9,218 @@ import {
   Row, 
   Col, 
   Flex,
-  Badge
+  Badge,
+  message,
+  Button,
+  Tooltip
 } from 'antd';
 import { 
   ClockCircleOutlined, 
   PictureOutlined, 
   EditOutlined, 
   ExclamationCircleOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  CopyOutlined,
+  CheckOutlined
 } from '@ant-design/icons';
 import { api } from '../../api';
 import type { Note } from '../../types';
 
 const { Title, Text, Paragraph } = Typography;
+
+const CodeBlock: React.FC<{ content: string; language?: string }> = ({ content, language }) => {
+  const [hovered, setHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      message.success('Đã sao chép mã nguồn!');
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div 
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ position: 'relative', margin: '12px 0' }}
+    >
+      {hovered && (
+        <Button
+          size="small"
+          type="default"
+          style={{ 
+            position: 'absolute', 
+            top: 8, 
+            right: 8, 
+            zIndex: 10,
+            backgroundColor: copied ? '#10b981' : '#ffffff',
+            borderColor: copied ? '#10b981' : '#cbd5e1',
+            color: copied ? '#ffffff' : '#475569',
+            fontSize: 11
+          }}
+          icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+          onClick={handleCopy}
+        >
+          {copied ? 'Đã chép' : 'Sao chép'}
+        </Button>
+      )}
+      {language && (
+        <div style={{
+          position: 'absolute',
+          bottom: 8,
+          right: 12,
+          fontSize: 10,
+          color: '#64748b',
+          textTransform: 'uppercase',
+          fontWeight: 'bold',
+          pointerEvents: 'none'
+        }}>
+          {language}
+        </div>
+      )}
+      <pre style={{
+        padding: '12px 16px',
+        backgroundColor: '#f1f5f9',
+        color: '#334155',
+        borderRadius: 8,
+        fontFamily: 'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
+        fontSize: 13,
+        overflowX: 'auto',
+        margin: 0,
+        lineHeight: 1.5,
+        border: '1px solid #cbd5e1',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all'
+      }}>
+        <code>{content}</code>
+      </pre>
+    </div>
+  );
+};
+
+const InlineCode: React.FC<{ content: string }> = ({ content }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      message.success(`Đã sao chép "${content}"!`);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Tooltip title={copied ? 'Đã sao chép!' : 'Click để sao chép'}>
+      <code 
+        onClick={handleCopy}
+        style={{ 
+          fontFamily: 'SFMono-Medium, Consolas, Monaco, monospace',
+          backgroundColor: '#f1f5f9',
+          color: '#e11d48',
+          padding: '2px 6px',
+          borderRadius: 4,
+          fontSize: '0.875em',
+          border: '1px solid #cbd5e1',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          display: 'inline-block',
+          verticalAlign: 'middle',
+          margin: '0 2px'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#e2e8f0';
+          e.currentTarget.style.borderColor = '#94a3b8';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#f1f5f9';
+          e.currentTarget.style.borderColor = '#cbd5e1';
+        }}
+      >
+        {content}
+      </code>
+    </Tooltip>
+  );
+};
+
+function parseContent(text: string): React.ReactNode[] {
+  if (!text) return [];
+  const parts = text.split(/```/g);
+  const elements: React.ReactNode[] = [];
+  
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 1) {
+      // Explicit triple backtick code blocks
+      const codeContent = parts[i];
+      const match = codeContent.match(/^([a-zA-Z0-9+#-]+)?\n([\s\S]*)$/);
+      if (match) {
+        elements.push(
+          <CodeBlock 
+            key={`cb-triple-${i}`} 
+            content={match[2].trimEnd()} 
+            language={match[1] || 'code'} 
+          />
+        );
+      } else {
+        elements.push(
+          <CodeBlock 
+            key={`cb-triple-${i}`} 
+            content={codeContent.trimEnd()} 
+          />
+        );
+      }
+    } else {
+      // Normal text, check for single backticks
+      const textPart = parts[i];
+      const subParts = textPart.split(/`/g);
+      
+      for (let j = 0; j < subParts.length; j++) {
+        if (j % 2 === 1) {
+          // Inside single backticks
+          const content = subParts[j];
+          if (content.includes('\n')) {
+            // Contains newlines -> render as a full code block
+            elements.push(
+              <CodeBlock 
+                key={`cb-single-${i}-${j}`} 
+                content={content} 
+              />
+            );
+          } else {
+            // Inline code
+            elements.push(
+              <InlineCode 
+                key={`code-inline-${i}-${j}`} 
+                content={content} 
+              />
+            );
+          }
+        } else {
+          // Plain text, check for **bold** text
+          const normalText = subParts[j];
+          if (normalText) {
+            const boldParts = normalText.split(/(\*\*[^*]+\*\*)/g);
+            const parsed = boldParts.map((bPart, bIdx) => {
+              if (bPart.startsWith('**') && bPart.endsWith('**')) {
+                return <strong key={`bold-${i}-${j}-${bIdx}`}>{bPart.slice(2, -2)}</strong>;
+              }
+              return bPart;
+            });
+            
+            elements.push(
+              <span key={`text-${i}-${j}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {parsed}
+              </span>
+            );
+          }
+        }
+      }
+    }
+  }
+  return elements;
+}
 
 function getRemainingSeconds(expiresAtStr: string): number {
   const diff = new Date(expiresAtStr).getTime() - Date.now();
@@ -219,24 +418,49 @@ export default function SharedNotePage() {
             {note.title || '(Không có tiêu đề)'}
           </Title>
 
-          {/* Text Content */}
-          <Paragraph 
+          {/* Text Content Header */}
+          <Flex justify="space-between" align="center" style={{ marginBottom: 4 }}>
+            <Text type="secondary" strong style={{ fontSize: 12, letterSpacing: '0.5px' }}>
+              <FileTextOutlined /> NỘI DUNG GHI CHÚ
+            </Text>
+            {note.content && (
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<CopyOutlined />} 
+                onClick={() => {
+                  navigator.clipboard.writeText(note.content).then(() => {
+                    message.success('Đã sao chép toàn bộ nội dung!');
+                  });
+                }}
+                style={{ fontSize: 12, color: '#475569' }}
+              >
+                Sao chép tất cả
+              </Button>
+            )}
+          </Flex>
+
+          {/* Text Content Area */}
+          <div 
             style={{ 
-              fontSize: 16, 
+              fontSize: 15, 
               lineHeight: 1.7, 
               color: '#334155', 
-              whiteSpace: 'pre-wrap', 
-              wordBreak: 'break-word',
               backgroundColor: '#f8fafc',
               padding: '16px 20px',
               borderRadius: 12,
-              border: '1px solid #f1f5f9',
-              maxHeight: '350px',
-              overflowY: 'auto'
+              border: '1px solid #e2e8f0',
+              maxHeight: '380px',
+              overflowY: 'auto',
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
             }}
           >
-            {note.content || <Text type="secondary" italic>Ghi chú không có nội dung văn bản.</Text>}
-          </Paragraph>
+            {note.content ? (
+              parseContent(note.content)
+            ) : (
+              <Text type="secondary" italic>Ghi chú không có nội dung văn bản.</Text>
+            )}
+          </div>
 
           {/* Image & Drawing Grid */}
           {(note.image_url || note.drawing) && (

@@ -11,6 +11,7 @@ import {
   CalendarOutlined,
   ProjectOutlined,
   EditOutlined,
+  FileMarkdownOutlined,
 } from '@ant-design/icons';
 import { useDashboard } from '../context';
 
@@ -35,9 +36,11 @@ export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: bool
     ...(isAdmin ? [{ key: '/projects', icon: <ProjectOutlined />, label: 'Quản lý dự án' }] : []),
     ...(isAdmin ? [{ key: '/users', icon: <TeamOutlined />, label: 'Quản lý Users' }] : []),
     { key: '/settings', icon: <SettingOutlined />, label: 'Cài đặt cá nhân' },
-    { type: 'divider' },
     { key: 'group-utility', type: 'group', label: collapsed ? '' : 'TIỆN ÍCH' },
     { key: '/notes', icon: <EditOutlined />, label: 'Ghi chú nhanh' },
+    { type: 'divider' },
+    { key: 'group-tool', type: 'group', label: collapsed ? '' : 'CÔNG CỤ' },
+    { key: '/markdowns', icon: <FileMarkdownOutlined />, label: 'Tài liệu Markdown' },
   ];
 
   return (
