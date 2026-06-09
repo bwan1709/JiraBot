@@ -1,6 +1,6 @@
 const { db } = require('../db');
 
-const PUBLIC_PATHS = ['/login.html', '/docx.bundle.js', '/favicon.ico'];
+const PUBLIC_PATHS = ['/login.html', '/docx.bundle.js', '/favicon.ico', '/favicon.png'];
 const PUBLIC_API_PREFIXES = ['/api/login', '/api/register'];
 // Static build assets (Vite output: JS/CSS/fonts) must be reachable before login,
 // otherwise the unauthenticated login page can't load its bundles. These files are
