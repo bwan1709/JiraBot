@@ -14,7 +14,8 @@ import {
   Row,
   Col,
   Flex,
-  Segmented
+  Segmented,
+  Grid
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -134,6 +135,17 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           </div>
           ${language ? `<div style="position: absolute; right: 12px; bottom: 8px; font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase; pointer-events: none;">${language}</div>` : ''}
           <pre style="padding: 12px 16px; background-color: #f1f5f9; color: #334155; border-radius: 8px; font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; overflow-x: auto; margin: 0; line-height: 1.5; border: 1px solid #cbd5e1; white-space: pre-wrap; word-break: break-all;"><code>${escapedCode}</code></pre>
+        </div>
+      `;
+    };
+
+    renderer.table = (header: string, body: string) => {
+      return `
+        <div class="table-wrapper">
+          <table>
+            <thead>${header}</thead>
+            <tbody>${body}</tbody>
+          </table>
         </div>
       `;
     };
@@ -272,13 +284,20 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           margin: 0 0 16px 0;
           font-style: italic;
         }
+        .markdown-body .table-wrapper {
+          overflow-x: auto;
+          max-width: 100%;
+          margin-bottom: 16px;
+          -webkit-overflow-scrolling: touch;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+        }
         .markdown-body table {
           border-spacing: 0;
           border-collapse: collapse;
           margin-top: 0;
-          margin-bottom: 16px;
+          margin-bottom: 0;
           width: 100%;
-          overflow: auto;
         }
         .markdown-body table th, .markdown-body table td {
           padding: 8px 12px;
@@ -322,6 +341,9 @@ export default function MarkdownPage() {
   const [docs, setDocs] = useState<MarkdownDoc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<MarkdownDoc | null>(null);
   
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.lg;
+
   // Workspace states
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -329,6 +351,13 @@ export default function MarkdownPage() {
   // Layout toggle: 'edit' | 'preview' | 'split'
   const [layoutMode, setLayoutMode] = useState<'edit' | 'preview' | 'split'>('split');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+
+  // Enforce layout mode is not 'split' on mobile
+  useEffect(() => {
+    if (isMobile && layoutMode === 'split') {
+      setLayoutMode('edit');
+    }
+  }, [isMobile, layoutMode]);
   const [loading, setLoading] = useState(true);
   const [nowTime, setNowTime] = useState(Date.now());
   const [isDragOver, setIsDragOver] = useState(false);
@@ -558,9 +587,9 @@ export default function MarkdownPage() {
         showRefresh={false}
       />
       
-      <Row gutter={24} style={{ height: 'calc(100vh - 180px)', marginBottom: 16 }}>
+      <Row gutter={[24, 24]} style={{ height: isMobile ? 'auto' : 'calc(100vh - 180px)', marginBottom: 16 }}>
         {/* Left Side: Document List */}
-        <Col xs={24} lg={6} style={{ height: '100%' }}>
+        <Col xs={24} lg={6} style={{ height: isMobile ? 'auto' : '100%' }}>
           <Card 
             title={
               <Flex justify="space-between" align="center">
@@ -577,7 +606,7 @@ export default function MarkdownPage() {
             }
             styles={{ body: { padding: '8px 0', overflowY: 'auto', flexGrow: 1 } }}
             style={{ 
-              height: '100%', 
+              height: isMobile ? '280px' : '100%', 
               boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
               borderRadius: 12,
               display: 'flex',
@@ -678,9 +707,9 @@ export default function MarkdownPage() {
         </Col>
 
         {/* Right Side: Split Editor / Preview Workspace */}
-        <Col xs={24} lg={18} style={{ height: '100%' }}>
+        <Col xs={24} lg={18} style={{ height: isMobile ? 'auto' : '100%' }}>
           {!selectedDoc ? (
-            <Card style={{ height: '100%', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Card style={{ height: isMobile ? '350px' : '100%', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Flex vertical align="center" style={{ padding: 48, textAlign: 'center' }}>
                 <FileTextOutlined style={{ fontSize: 54, color: '#e2e8f0', marginBottom: 16 }} />
                 <Text strong style={{ fontSize: 16 }}>Không có tài liệu nào đang mở</Text>
@@ -691,10 +720,10 @@ export default function MarkdownPage() {
             </Card>
           ) : (
             <Card 
-              styles={{ body: { padding: '16px 20px', display: 'flex', flexDirection: 'column', height: '100%' } }}
+              styles={{ body: { padding: isMobile ? '12px 12px' : '16px 20px', display: 'flex', flexDirection: 'column', height: '100%' } }}
               style={{ 
                 borderRadius: 12, 
-                height: '100%', 
+                height: isMobile ? '550px' : '100%', 
                 boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
                 border: '1px solid #e2e8f0',
                 position: 'relative'
@@ -723,7 +752,7 @@ export default function MarkdownPage() {
                     options={[
                       { label: <span><EditOutlined /> Sửa</span>, value: 'edit' },
                       { label: <span><EyeOutlined /> Xem trước</span>, value: 'preview' },
-                      { label: <span><AppstoreOutlined /> Song song</span>, value: 'split' }
+                      ...(!isMobile ? [{ label: <span><AppstoreOutlined /> Song song</span>, value: 'split' }] : [])
                     ]}
                     size="small"
                   />

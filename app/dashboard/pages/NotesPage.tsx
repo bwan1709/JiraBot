@@ -15,7 +15,8 @@ import {
   Popconfirm,
   Row,
   Col,
-  Flex
+  Flex,
+  Grid
 } from 'antd';
 import { 
   EditOutlined, 
@@ -461,6 +462,9 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.lg;
+  
   // Form states
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -694,7 +698,7 @@ export default function NotesPage() {
         showRefresh={false}
       />
       
-      <Row gutter={24} style={{ minHeight: 'calc(100vh - 160px)' }}>
+      <Row gutter={[24, 24]} style={{ minHeight: isMobile ? 'auto' : 'calc(100vh - 160px)' }}>
         {/* Left Side: Notes list */}
         <Col xs={24} lg={8} style={{ marginBottom: 16 }}>
           <Card 
@@ -713,8 +717,8 @@ export default function NotesPage() {
             }
             styles={{ body: { padding: '8px 0' } }}
             style={{ 
-              height: '100%', 
-              maxHeight: 650, 
+              height: isMobile ? '280px' : '100%', 
+              maxHeight: isMobile ? '280px' : 650, 
               overflowY: 'auto', 
               boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
               borderRadius: 12
@@ -826,7 +830,7 @@ export default function NotesPage() {
               style={{ 
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                 borderRadius: 12,
-                minHeight: 550
+                minHeight: isMobile ? 450 : 550
               }}
               title={
                 <Flex justify="space-between" align="center" wrap gap={12}>
@@ -913,7 +917,7 @@ export default function NotesPage() {
                         lineHeight: 1.7, 
                         color: '#334155', 
                         backgroundColor: '#f8fafc',
-                        padding: '12px 16px',
+                        padding: isMobile ? '10px 12px' : '12px 16px',
                         borderRadius: 8,
                         border: '1px solid #cbd5e1',
                         maxHeight: '250px',
@@ -1012,7 +1016,7 @@ export default function NotesPage() {
                 textAlign: 'center',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                 borderRadius: 12,
-                minHeight: 550
+                minHeight: isMobile ? 350 : 550
               }}
             >
               <Flex vertical align="center" gap={16}>

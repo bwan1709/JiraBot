@@ -12,7 +12,8 @@ import {
   Badge,
   message,
   Button,
-  Tooltip
+  Tooltip,
+  Grid
 } from 'antd';
 import { 
   ClockCircleOutlined, 
@@ -239,6 +240,9 @@ export default function SharedNotePage() {
   const { id } = useParams<{ id: string }>();
   const [note, setNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.lg;
   const [error, setError] = useState<string | null>(null);
   const [nowTime, setNowTime] = useState(Date.now());
 
@@ -447,7 +451,7 @@ export default function SharedNotePage() {
               lineHeight: 1.7, 
               color: '#334155', 
               backgroundColor: '#f8fafc',
-              padding: '16px 20px',
+              padding: isMobile ? '12px 14px' : '16px 20px',
               borderRadius: 12,
               border: '1px solid #e2e8f0',
               maxHeight: '380px',

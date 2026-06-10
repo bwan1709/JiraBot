@@ -9,7 +9,8 @@ import {
   Flex,
   Badge,
   message,
-  Button
+  Button,
+  Grid
 } from 'antd';
 import { 
   ClockCircleOutlined, 
@@ -40,6 +41,9 @@ export default function SharedMarkdownPage() {
   const { id } = useParams<{ id: string }>();
   const [doc, setDoc] = useState<MarkdownDoc | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.lg;
   const [error, setError] = useState<string | null>(null);
   const [nowTime, setNowTime] = useState(Date.now());
 
@@ -254,7 +258,7 @@ export default function SharedMarkdownPage() {
           <div 
             style={{ 
               backgroundColor: '#ffffff',
-              padding: '24px 32px',
+              padding: isMobile ? '16px 16px' : '24px 32px',
               borderRadius: 12,
               border: '1px solid #e2e8f0',
               minHeight: '300px',
