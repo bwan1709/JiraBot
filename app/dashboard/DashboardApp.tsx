@@ -14,6 +14,7 @@ import NotesPage from './pages/NotesPage';
 import SharedNotePage from './pages/SharedNotePage';
 import MarkdownPage from './pages/MarkdownPage';
 import SharedMarkdownPage from './pages/SharedMarkdownPage';
+import PdfEditorPage from './pages/PdfEditorPage';
 
 export default function DashboardApp() {
   return (
@@ -32,6 +33,7 @@ export default function DashboardApp() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="notes" element={<NotesPage />} />
             <Route path="markdowns" element={<MarkdownPage />} />
+            <Route path="pdf-editor" element={<PdfEditorPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

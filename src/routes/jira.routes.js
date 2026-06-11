@@ -224,15 +224,25 @@ router.get('/daily-report', async (req, res) => {
             const actualStart = getActualStart(issue.fields);
             const actualEnd = getActualEnd(issue.fields);
             
-            // Calculate time spent today on this task
             const wls = issue.fields.worklog?.worklogs || [];
             let timeSpentSeconds = 0;
             wls.forEach(wl => {
                 if (wl.author.accountId !== req.user.account_id) return;
                 
-                const targetDateStr = getLocalDateStr(actualEnd) || getLocalDateStr(actualStart) || getLocalDateStr(wl.started);
-                const startedDateStr = getLocalDateStr(wl.started);
-                if (targetDateStr === date || startedDateStr === date) {
+                const logDate = getLocalDateStr(wl.started);
+                const aeDate = getLocalDateStr(actualEnd);
+                const asDate = getLocalDateStr(actualStart);
+                
+                let targetDateStr = logDate;
+                if (logDate === date) {
+                    targetDateStr = logDate;
+                } else if (aeDate === date) {
+                    targetDateStr = aeDate;
+                } else if (asDate === date) {
+                    targetDateStr = asDate;
+                }
+
+                if (targetDateStr === date) {
                     timeSpentSeconds += wl.timeSpentSeconds;
                 }
             });
@@ -251,19 +261,37 @@ router.get('/daily-report', async (req, res) => {
         // Extract and sort individual worklogs for the timeline
         const worklogs = [];
         issues.forEach(issue => {
+            const actualStart = getActualStart(issue.fields);
+            const actualEnd = getActualEnd(issue.fields);
             const wls = issue.fields.worklog?.worklogs || [];
             wls.forEach(wl => {
                 if (wl.author.accountId !== req.user.account_id) return;
                 
-                const startedDateStr = getLocalDateStr(wl.started);
-                if (startedDateStr === date) {
+                const logDate = getLocalDateStr(wl.started);
+                const aeDate = getLocalDateStr(actualEnd);
+                const asDate = getLocalDateStr(actualStart);
+                
+                let targetDateStr = logDate;
+                if (logDate === date) {
+                    targetDateStr = logDate;
+                } else if (aeDate === date) {
+                    targetDateStr = aeDate;
+                } else if (asDate === date) {
+                    targetDateStr = asDate;
+                }
+
+                if (targetDateStr === date) {
+                    const startedTimestamp = logDate === date 
+                        ? wl.started 
+                        : `${date}T09:00:00.000+0700`; // default to 9:00 AM on mapped date
+                        
                     worklogs.push({
                         id: wl.id,
                         key: issue.key,
                         summary: issue.fields.summary,
                         url: `${req.user.base_url}/browse/${issue.key}`,
                         comment: wl.comment || '',
-                        started: wl.started, // raw ISO timestamp
+                        started: startedTimestamp,
                         timeSpentSeconds: wl.timeSpentSeconds,
                         timeSpent: wl.timeSpent
                     });

@@ -12,6 +12,7 @@ import {
   ProjectOutlined,
   EditOutlined,
   FileMarkdownOutlined,
+  FilePdfOutlined,
 } from '@ant-design/icons';
 import { useDashboard } from '../context';
 
@@ -41,6 +42,7 @@ export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: bool
     { type: 'divider' },
     { key: 'group-tool', type: 'group', label: collapsed ? '' : 'CÔNG CỤ' },
     { key: '/markdowns', icon: <FileMarkdownOutlined />, label: 'Tài liệu Markdown' },
+    { key: '/pdf-editor', icon: <FilePdfOutlined />, label: 'Biên tập PDF' },
   ];
 
   return (

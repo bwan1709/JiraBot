@@ -203,7 +203,19 @@ async function refreshMonthData(user, yearMonth) {
         wls.forEach(wl => {
             if (wl.author.accountId !== user.account_id) return;
             
-            const targetDateStr = getLocalDateStr(actualEnd) || getLocalDateStr(actualStart) || getLocalDateStr(wl.started);
+            const logDate = getLocalDateStr(wl.started);
+            const aeDate = getLocalDateStr(actualEnd);
+            const asDate = getLocalDateStr(actualStart);
+            
+            let targetDateStr = logDate;
+            if (logDate && logDate >= startDate && logDate <= endDate) {
+                targetDateStr = logDate;
+            } else if (aeDate && aeDate >= startDate && aeDate <= endDate) {
+                targetDateStr = aeDate;
+            } else if (asDate && asDate >= startDate && asDate <= endDate) {
+                targetDateStr = asDate;
+            }
+
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
                 if (workingDaysSet.has(mappedDateStr)) {
@@ -223,7 +235,19 @@ async function refreshMonthData(user, yearMonth) {
         wls.forEach(wl => {
             if (wl.author.accountId !== user.account_id) return;
             
-            const targetDateStr = getLocalDateStr(actualEnd) || getLocalDateStr(actualStart) || getLocalDateStr(wl.started);
+            const logDate = getLocalDateStr(wl.started);
+            const aeDate = getLocalDateStr(actualEnd);
+            const asDate = getLocalDateStr(actualStart);
+            
+            let targetDateStr = logDate;
+            if (logDate && logDate >= startDate && logDate <= endDate) {
+                targetDateStr = logDate;
+            } else if (aeDate && aeDate >= startDate && aeDate <= endDate) {
+                targetDateStr = aeDate;
+            } else if (asDate && asDate >= startDate && asDate <= endDate) {
+                targetDateStr = asDate;
+            }
+
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
                 if (dailySecMap[mappedDateStr] !== undefined) {

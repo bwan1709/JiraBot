@@ -118,34 +118,13 @@ function DailyTimeline({ date, reloadSignal }: Props) {
     const validBlocks: Block[] = [];
     const outsideBlocks: Block[] = [];
 
-    tasks.forEach((t) => {
-      const taskWorklogs = worklogs.filter((wl) => wl.key === t.key);
-      const comments = taskWorklogs
-        .map((wl) => extractCommentText(wl.comment))
-        .filter((c) => c && c.trim() !== '')
-        .join(' | ');
-      const timeSpentTodaySec = taskWorklogs.reduce((sum, wl) => sum + wl.timeSpentSeconds, 0);
+    worklogs.forEach((wl) => {
+      const comments = extractCommentText(wl.comment);
+      const timeSpentTodaySec = wl.timeSpentSeconds;
+      const task = tasks.find((t) => t.key === wl.key);
 
-      let s: Date | null = null;
-      if (t.actual_start) s = new Date(t.actual_start);
-      else if (taskWorklogs.length > 0) {
-        const sorted = [...taskWorklogs].sort(
-          (a, b) => new Date(a.started).getTime() - new Date(b.started).getTime(),
-        );
-        s = new Date(sorted[0].started);
-      }
-      let e: Date | null = null;
-      if (t.actual_end) e = new Date(t.actual_end);
-      else if (taskWorklogs.length > 0) {
-        const sorted = [...taskWorklogs].sort(
-          (a, b) => new Date(a.started).getTime() - new Date(b.started).getTime(),
-        );
-        const last = sorted[sorted.length - 1];
-        e = new Date(new Date(last.started).getTime() + last.timeSpentSeconds * 1000);
-      }
-      if (!s) s = new Date(dayStartMs);
-      if (!e) e = new Date(s.getTime() + (timeSpentTodaySec > 0 ? timeSpentTodaySec * 1000 : 3600 * 1000));
-      if (s.getTime() >= e.getTime()) e = new Date(s.getTime() + 30 * 60 * 1000);
+      const s = new Date(wl.started);
+      const e = new Date(s.getTime() + wl.timeSpentSeconds * 1000);
 
       const startMinFromMidnight = Math.round((s.getTime() - dayMidnightMs) / 60000);
       const endMinFromMidnight = Math.round((e.getTime() - dayMidnightMs) / 60000);
@@ -153,11 +132,11 @@ function DailyTimeline({ date, reloadSignal }: Props) {
       const visEndMin = Math.min(dayEndMin, endMinFromMidnight);
 
       const block: Block = {
-        key: t.key,
-        summary: t.summary,
-        url: t.url,
-        actual_start: t.actual_start,
-        actual_end: t.actual_end,
+        key: wl.key,
+        summary: wl.summary,
+        url: wl.url,
+        actual_start: task?.actual_start || null,
+        actual_end: task?.actual_end || null,
         s,
         e,
         visStartMin,
