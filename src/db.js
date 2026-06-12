@@ -448,6 +448,32 @@ function deleteProject(id) {
     db.prepare(`DELETE FROM projects WHERE id = ?`).run(id);
 }
 
+function syncProjects(jiraProjects) {
+    const run = db.transaction((list) => {
+        const now = new Date().toISOString();
+        const keys = list.map(p => p.key);
+        
+        // Delete projects that are not in Jira list
+        if (keys.length > 0) {
+            const placeholders = keys.map(() => '?').join(',');
+            db.prepare(`DELETE FROM projects WHERE key NOT IN (${placeholders})`).run(...keys);
+        } else {
+            db.prepare(`DELETE FROM projects`).run();
+        }
+        
+        // Insert or update projects
+        const insertOrUpdate = db.prepare(`
+            INSERT INTO projects (key, name, created_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET name = excluded.name
+        `);
+        for (const p of list) {
+            insertOrUpdate.run(p.key, p.name, now);
+        }
+    });
+    run(jiraProjects);
+}
+
 function cleanupNotes() {
     const now = new Date().toISOString();
     db.prepare(`DELETE FROM notes WHERE expires_at <= ?`).run(now);
@@ -507,6 +533,7 @@ module.exports = {
     getProjects,
     saveProject,
     deleteProject,
+    syncProjects,
     cleanupNotes,
     saveNote,
     getNote,

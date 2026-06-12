@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db, getProjects, saveProject, deleteProject } = require('../db');
+const { db, getProjects, saveProject, deleteProject, syncProjects } = require('../db');
 const { requireAdmin } = require('../middlewares/auth');
 
 // POST /api/login — Login handler
@@ -229,50 +229,49 @@ router.get('/projects', (req, res) => {
     }
 });
 
-// POST /api/projects — create new project (Admin only)
+// POST /api/projects/sync — sync projects from Jira (Admin only)
+router.post('/projects/sync', requireAdmin, async (req, res) => {
+    try {
+        if (!req.user.token || !req.user.cloud_id || !req.user.account_id || !req.user.base_url) {
+            return res.status(400).json({ error: 'Tài khoản admin chưa cấu hình đầy đủ thông tin Jira.' });
+        }
+
+        const { jiraGet } = require('../services/jira.service');
+        const list = await jiraGet(req.user, '/project');
+        
+        const jiraProjects = (Array.isArray(list) ? list : []).map(p => ({
+            key: p.key.trim().toUpperCase(),
+            name: p.name.trim()
+        }));
+
+        if (jiraProjects.length === 0) {
+            return res.status(400).json({ error: 'Không tìm thấy dự án nào trên Jira.' });
+        }
+
+        syncProjects(jiraProjects);
+        res.json({ success: true, count: jiraProjects.length });
+    } catch (e) {
+        console.error('❌ Lỗi đồng bộ dự án:', e.message);
+        if (e.message === 'JIRA_401') {
+            return res.status(400).json({ error: 'Thông tin xác thực Jira không chính xác hoặc đã hết hạn.' });
+        }
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/projects — create new project (Disabled)
 router.post('/projects', requireAdmin, (req, res) => {
-    try {
-        const { key, name } = req.body;
-        if (!key || !name) {
-            return res.status(400).json({ error: 'Thiếu mã dự án hoặc tên dự án.' });
-        }
-        saveProject(key.trim().toUpperCase(), name.trim());
-        res.json({ success: true });
-    } catch (e) {
-        if (e.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: 'Mã dự án này đã tồn tại.' });
-        }
-        res.status(500).json({ error: e.message });
-    }
+    return res.status(400).json({ error: 'Chức năng tạo dự án thủ công đã bị vô hiệu hóa. Vui lòng sử dụng tính năng đồng bộ từ Jira.' });
 });
 
-// PUT /api/projects/:id — update project (Admin only)
+// PUT /api/projects/:id — update project (Disabled)
 router.put('/projects/:id', requireAdmin, (req, res) => {
-    try {
-        const { id } = req.params;
-        const { key, name } = req.body;
-        if (!key || !name) {
-            return res.status(400).json({ error: 'Thiếu thông tin cập nhật.' });
-        }
-        saveProject(key.trim().toUpperCase(), name.trim(), id);
-        res.json({ success: true });
-    } catch (e) {
-        if (e.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: 'Mã dự án này đã tồn tại.' });
-        }
-        res.status(500).json({ error: e.message });
-    }
+    return res.status(400).json({ error: 'Chức năng chỉnh sửa dự án thủ công đã bị vô hiệu hóa. Vui lòng sử dụng tính năng đồng bộ từ Jira.' });
 });
 
-// DELETE /api/projects/:id — delete project (Admin only)
+// DELETE /api/projects/:id — delete project (Disabled)
 router.delete('/projects/:id', requireAdmin, (req, res) => {
-    try {
-        const { id } = req.params;
-        deleteProject(id);
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+    return res.status(400).json({ error: 'Chức năng xóa dự án thủ công đã bị vô hiệu hóa. Danh sách dự án được quản lý tự động qua đồng bộ từ Jira.' });
 });
 
 module.exports = router;
