@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Spin } from 'antd';
-import { DashboardOutlined } from '@ant-design/icons';
+import { Spin, Button } from 'antd';
+import { DashboardOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useDashboard, DataGate } from '../context';
 import PageHeader from '../components/PageHeader';
 import StatsGrid from '../components/StatsGrid';
@@ -16,7 +16,7 @@ const fallback = (
 );
 
 export default function OverviewPage() {
-  const { data, currentMonth, selectTimelineDate } = useDashboard();
+  const { data, currentMonth, selectTimelineDate, openLeave } = useDashboard();
 
   return (
     <>
@@ -24,6 +24,11 @@ export default function OverviewPage() {
         icon={<DashboardOutlined />}
         title="Tổng quan"
         subtitle="Tiến độ & phân bổ giờ công trong tháng"
+        extra={
+          <Button icon={<CalendarOutlined />} onClick={openLeave}>
+            Quản lý nghỉ phép
+          </Button>
+        }
       />
       <DataGate>
         <StatsGrid data={data!} currentMonth={currentMonth!} />

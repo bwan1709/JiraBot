@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, loadMonthData, getMonthlyPlan, getMonthlyPlans, saveMonthlyPlan } = require('../db');
 const { requirePmOrAdmin } = require('../middlewares/auth');
-const { jiraGet, jiraPost, jiraPut, searchAll, refreshMonthData, fetchLabels } = require('../services/jira.service');
+const { jiraGet, jiraPost, jiraPut, searchAll, refreshMonthData, fetchLabels, recalculateLocalMonthData } = require('../services/jira.service');
 
 // GET /api/months — list available months from DB
 router.get('/months', (req, res) => {
@@ -355,6 +355,59 @@ router.post('/monthly-plans', requirePmOrAdmin, (req, res) => {
         }
         saveMonthlyPlan(year_month, projects, title || '', description || '', req.user.id, items || []);
         res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/leaves — get user's leave days
+router.get('/leaves', (req, res) => {
+    try {
+        const { month } = req.query; // YYYY-MM
+        let rows;
+        if (month) {
+            rows = db.prepare(`SELECT date, hours, comment FROM leave_days WHERE user_id = ? AND date LIKE ? ORDER BY date ASC`)
+                .all(req.user.id, `${month}-%`);
+        } else {
+            rows = db.prepare(`SELECT date, hours, comment FROM leave_days WHERE user_id = ? ORDER BY date DESC`)
+                .all(req.user.id);
+        }
+        res.json({ leaves: rows });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/leaves — add or update a leave day
+router.post('/leaves', (req, res) => {
+    try {
+        const { date, hours, comment } = req.body;
+        if (!date) {
+            return res.status(400).json({ error: 'Thiếu ngày nghỉ phép (date)' });
+        }
+        const hrs = hours !== undefined ? parseFloat(hours) : 8;
+        db.prepare(`
+            INSERT OR REPLACE INTO leave_days (user_id, date, hours, comment)
+            VALUES (?, ?, ?, ?)
+        `).run(req.user.id, date, hrs, comment || '');
+
+        const ym = date.substring(0, 7);
+        const updatedData = recalculateLocalMonthData(req.user.id, ym);
+        res.json({ success: true, data: updatedData });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// DELETE /api/leaves/:date — delete a leave day
+router.delete('/leaves/:date', (req, res) => {
+    try {
+        const { date } = req.params;
+        db.prepare(`DELETE FROM leave_days WHERE user_id = ? AND date = ?`).run(req.user.id, date);
+
+        const ym = date.substring(0, 7);
+        const updatedData = recalculateLocalMonthData(req.user.id, ym);
+        res.json({ success: true, data: updatedData });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

@@ -12,7 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import { App, Spin, Empty, Button, theme } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api, bust } from '../api';
 import type { MonthData, Task, User, MonthlyPlan } from '../types';
 import { todayStr } from '../utils/format';
@@ -22,6 +22,7 @@ const WorklogModal = lazy(() => import('./modals/WorklogModal'));
 const StatusModal = lazy(() => import('./modals/StatusModal'));
 const EditFieldsModal = lazy(() => import('./modals/EditFieldsModal'));
 const JiraGuideModal = lazy(() => import('./modals/JiraGuideModal'));
+const LeaveModal = lazy(() => import('./modals/LeaveModal'));
 
 const RELOAD_KEY = 'jb-reload-min';
 function initialReloadMinutes(): number {
@@ -59,6 +60,8 @@ interface DashboardCtx {
   openStatus: (t: Task) => void;
   openEdit: (t: Task) => void;
   openGuide: () => void;
+  openLeave: () => void;
+  applyData: (d: MonthData) => void;
   handleExport: (type: 'daily' | 'excel' | 'word') => void;
   logout: () => void;
   reloadUser: () => Promise<void>;
@@ -75,6 +78,7 @@ export function useDashboard(): DashboardCtx {
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState<User | null>(null);
   const [months, setMonths] = useState<string[]>([]);
@@ -95,10 +99,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [statusTask, setStatusTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [jiraGuideOpen, setJiraGuideOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const currentMonthRef = useRef<string | null>(null);
   const dataRef = useRef<MonthData | null>(null);
   const userRef = useRef<User | null>(null);
+  const lastReloadTimeRef = useRef<number>(0);
   currentMonthRef.current = currentMonth;
   dataRef.current = data;
   userRef.current = user;
@@ -157,6 +163,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
       setRefreshing(true);
       try {
+        lastReloadTimeRef.current = Date.now();
         const d = await api.post<MonthData>(`/api/refresh/${ym}`);
         applyData(d);
         message.success(`Cập nhật thành công! ${d.task_count} tasks · ${d.total_logged}h logged`);
@@ -179,6 +186,27 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
     },
     [applyData, message, reloadMonths],
+  );
+
+  const silentRefresh = useCallback(
+    async (ym: string) => {
+      const now = Date.now();
+      if (now - lastReloadTimeRef.current < 30000) return;
+      lastReloadTimeRef.current = now;
+      try {
+        const d = await api.post<MonthData>(`/api/refresh/${ym}`);
+        applyData(d);
+        try {
+          const planRes = await api.get<{ plan: MonthlyPlan | null }>(`/api/monthly-plans/${ym}?${bust()}`);
+          setMonthlyPlan(planRes.plan);
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        /* silent */
+      }
+    },
+    [applyData],
   );
 
   const init = useCallback(async () => {
@@ -232,15 +260,32 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (autoReloadMinutes <= 0) return;
     const t = setInterval(async () => {
       if (!currentMonthRef.current || document.hidden) return;
-      try {
-        const d = await api.post<MonthData>(`/api/refresh/${currentMonthRef.current}`);
-        applyData(d);
-      } catch {
-        /* silent */
-      }
+      silentRefresh(currentMonthRef.current);
     }, autoReloadMinutes * 60 * 1000);
     return () => clearInterval(t);
-  }, [autoReloadMinutes, applyData]);
+  }, [autoReloadMinutes, silentRefresh]);
+
+  // Auto-reload when switching/navigating to the overview page
+  useEffect(() => {
+    if (location.pathname === '/' && currentMonth) {
+      silentRefresh(currentMonth);
+    }
+  }, [location.pathname, currentMonth, silentRefresh]);
+
+  // Auto-reload when returning to the page (refocus or tab becomes visible)
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && currentMonth) {
+        silentRefresh(currentMonth);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [currentMonth, silentRefresh]);
 
   // Default the timeline date whenever the month/data changes.
   useEffect(() => {
@@ -312,6 +357,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const openStatus = useCallback((t: Task) => setStatusTask(t), []);
   const openEdit = useCallback((t: Task) => setEditTask(t), []);
   const openGuide = useCallback(() => setJiraGuideOpen(true), []);
+  const openLeave = useCallback(() => setLeaveOpen(true), []);
 
   const handleExport = useCallback(
     async (type: 'daily' | 'excel' | 'word') => {
@@ -360,6 +406,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       openStatus,
       openEdit,
       openGuide,
+      openLeave,
+      applyData,
       handleExport,
       logout,
       reloadUser: init,
@@ -386,6 +434,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       openStatus,
       openEdit,
       openGuide,
+      openLeave,
+      applyData,
       handleExport,
       logout,
       init,
@@ -412,6 +462,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         {statusTask && <StatusModal task={statusTask} onClose={() => setStatusTask(null)} onDone={doRefresh} />}
         {editTask && <EditFieldsModal task={editTask} onClose={() => setEditTask(null)} onDone={doRefresh} />}
         {jiraGuideOpen && <JiraGuideModal open onClose={() => setJiraGuideOpen(false)} />}
+        {leaveOpen && <LeaveModal open onClose={() => setLeaveOpen(false)} />}
       </Suspense>
     </Ctx.Provider>
   );

@@ -96,6 +96,15 @@ function initDb() {
             PRIMARY KEY (user_id, year_month, date),
             FOREIGN KEY (user_id, year_month) REFERENCES months(user_id, year_month) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS leave_days (
+            user_id      INTEGER NOT NULL,
+            date         TEXT NOT NULL,
+            hours        REAL DEFAULT 8,
+            comment      TEXT,
+            PRIMARY KEY (user_id, date),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     `);
 
     // Migration: Add job_title column if it doesn't exist

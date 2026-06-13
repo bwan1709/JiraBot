@@ -1,5 +1,5 @@
 const fetch = require('node-fetch');
-const { saveMonthData, getMonthlyPlan } = require('../db');
+const { saveMonthData, getMonthlyPlan, loadMonthData, db } = require('../db');
 const { 
     pad, secToH, fmtH, getDaysInMonth, buildWorkingDays, MONTH_NAMES_VI 
 } = require('../utils/helpers');
@@ -148,6 +148,10 @@ async function refreshMonthData(user, yearMonth) {
 
     // ── Build daily hours map từ worklog issues ────────────────────────
     const wdList = buildWorkingDays(year, month);
+    const leaves = db.prepare(`SELECT date, hours FROM leave_days WHERE user_id = ? AND date LIKE ?`).all(user.id, `${yearMonth}-%`);
+    const leaveMap = {};
+    leaves.forEach(l => { leaveMap[l.date] = l.hours; });
+
     const dailySecMap = {};
     wdList.forEach(d => { dailySecMap[d.date] = 0; });
 
@@ -383,6 +387,7 @@ async function refreshMonthData(user, yearMonth) {
     // ── Build result ───────────────────────────────────────────────────
     const workingDays = wdList.map(d => ({
         ...d,
+        standard: Math.max(0, d.standard - (leaveMap[d.date] || 0)),
         logged: secToH(dailySecMap[d.date] || 0)
     }));
 
@@ -441,11 +446,61 @@ async function fetchLabels(user) {
     return all;
 }
 
+function recalculateLocalMonthData(userId, ym) {
+    const currentData = loadMonthData(userId, ym);
+    if (!currentData) return null;
+
+    const leaves = db.prepare(`SELECT date, hours FROM leave_days WHERE user_id = ? AND date LIKE ?`)
+        .all(userId, `${ym}-%`);
+    const leaveMap = {};
+    leaves.forEach(l => { leaveMap[l.date] = l.hours; });
+
+    const [yearStr, monthStr] = ym.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr);
+    const wdList = buildWorkingDays(year, month);
+
+    const loggedMap = {};
+    currentData.working_days.forEach(d => { loggedMap[d.date] = d.logged; });
+
+    const workingDays = wdList.map(d => ({
+        ...d,
+        standard: Math.max(0, d.standard - (leaveMap[d.date] || 0)),
+        logged: loggedMap[d.date] || 0
+    }));
+
+    const totalLogged = Math.round(workingDays.reduce((s, d) => s + d.logged, 0) * 100) / 100;
+    const standardHours = workingDays.reduce((s, d) => s + d.standard, 0);
+
+    const d_today = new Date();
+    const today = `${d_today.getFullYear()}-${pad(d_today.getMonth() + 1)}-${pad(d_today.getDate())}`;
+
+    const pastDays = workingDays.filter(d => d.date <= today);
+    const reqToDate = pastDays.reduce((s, d) => s + d.standard, 0);
+    const logToDate = Math.round(pastDays.reduce((s, d) => s + d.logged, 0) * 100) / 100;
+
+    const result = {
+        ...currentData,
+        standard_hours: standardHours,
+        total_logged: totalLogged,
+        required_to_date: reqToDate,
+        logged_to_date: logToDate,
+        net_to_date: Math.round((logToDate - reqToDate) * 100) / 100,
+        progress_pct: standardHours > 0 ? Math.round((totalLogged / standardHours) * 1000) / 10 : 0,
+        working_days: workingDays,
+        today
+    };
+
+    saveMonthData(userId, result);
+    return result;
+}
+
 module.exports = {
     jiraGet,
     jiraPost,
     jiraPut,
     searchAll,
     refreshMonthData,
-    fetchLabels
+    fetchLabels,
+    recalculateLocalMonthData
 };
