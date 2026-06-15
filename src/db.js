@@ -357,6 +357,10 @@ function loadMonthData(userId, ym) {
         created:            row.created
     });
 
+    const leaves = db.prepare(`SELECT date, hours, comment FROM leave_days WHERE user_id = ? AND date LIKE ?`).all(userId, `${ym}-%`);
+    const leaveMap = {};
+    leaves.forEach(l => { leaveMap[l.date] = { hours: l.hours, comment: l.comment }; });
+
     const tasks           = db.prepare(`SELECT * FROM tasks WHERE user_id = ? AND year_month = ? AND task_type = 'done' ORDER BY resolved_date DESC`).all(userId, ym).map(rowToTask);
     const in_progress_tasks = db.prepare(`SELECT * FROM tasks WHERE user_id = ? AND year_month = ? AND task_type = 'in_progress' ORDER BY key`).all(userId, ym).map(rowToTask);
     const todo_tasks      = db.prepare(`SELECT * FROM tasks WHERE user_id = ? AND year_month = ? AND task_type = 'todo' ORDER BY key`).all(userId, ym).map(rowToTask);
@@ -367,7 +371,9 @@ function loadMonthData(userId, ym) {
         dow:         row.dow,
         is_saturday: row.is_saturday === 1,
         standard:    row.standard,
-        logged:      row.logged
+        logged:      row.logged,
+        leave_hours: leaveMap[row.date]?.hours || 0,
+        leave_comment: leaveMap[row.date]?.comment || ''
     }));
 
     return {

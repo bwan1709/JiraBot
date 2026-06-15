@@ -1,10 +1,11 @@
 import { memo } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Flex, Space, Tag, Typography, Spin, theme, Grid } from 'antd';
-import { CloseCircleOutlined, CoffeeOutlined, FieldTimeOutlined } from '@ant-design/icons';
+import { Alert, Card, Flex, Space, Tag, Typography, Spin, theme, Grid } from 'antd';
+import { CloseCircleOutlined, CoffeeOutlined, FieldTimeOutlined, CalendarOutlined } from '@ant-design/icons';
 import { api } from '../../api';
 import type { DailyReport, DailyTask, Worklog } from '../../types';
 import { formatISOToDateTime, pad } from '../../utils/format';
+import { useDashboard } from '../context';
 
 const { Text } = Typography;
 const START_HOUR = 8;
@@ -77,10 +78,20 @@ function DailyTimeline({ date, reloadSignal }: Props) {
   const { token } = theme.useToken();
   const screens = useBreakpoint();
   const timelineMinW = screens.md ? undefined : 660;
+  const { data } = useDashboard();
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const leaveInfo = useMemo(() => {
+    if (!data || !date) return null;
+    const day = data.working_days.find((d) => d.date === date);
+    if (day && day.leave_hours && day.leave_hours > 0) {
+      return { hours: day.leave_hours, comment: day.leave_comment };
+    }
+    return null;
+  }, [data, date]);
 
   useEffect(() => {
     if (!date) return;
@@ -241,6 +252,20 @@ function DailyTimeline({ date, reloadSignal }: Props) {
 
     return (
       <>
+        {leaveInfo && (
+          <Alert
+            message={
+              <span>
+                <strong>Ngày nghỉ phép:</strong> Đã đăng ký nghỉ {leaveInfo.hours}h
+                {leaveInfo.comment ? ` (${leaveInfo.comment})` : ''}
+              </span>
+            }
+            type="warning"
+            showIcon
+            icon={<CalendarOutlined />}
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: timelineMinW ? 4 : 0 }}>
         <div style={{ minWidth: timelineMinW }}>
         <HourAxis hourMarks={hourMarks} height={HOUR_AXIS_H} />

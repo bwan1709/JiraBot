@@ -73,6 +73,8 @@ function StatsGrid({ data, currentMonth }: Props) {
   const net = data.net_to_date;
   const netNeg = net < 0;
 
+  const totalLeaves = (data.working_days || []).reduce((sum, d) => sum + (d.leave_hours || 0), 0);
+
   const filteredInProgress = (data.in_progress_tasks || []).filter(
     (t) => t.created && t.created.substring(0, 7) === currentMonth,
   ).length;
@@ -94,7 +96,7 @@ function StatsGrid({ data, currentMonth }: Props) {
           accent={token.colorPrimary}
           label="Giờ Chuẩn Tháng"
           value={`${data.standard_hours}h`}
-          sub={`Tiêu chuẩn ${data.month_label}`}
+          sub={`Tiêu chuẩn ${data.month_label}${totalLeaves > 0 ? ` · Nghỉ ${totalLeaves}h` : ''}`}
         />
       </Col>
       <Col flex="1 1 200px">

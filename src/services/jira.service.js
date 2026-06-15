@@ -148,9 +148,9 @@ async function refreshMonthData(user, yearMonth) {
 
     // ── Build daily hours map từ worklog issues ────────────────────────
     const wdList = buildWorkingDays(year, month);
-    const leaves = db.prepare(`SELECT date, hours FROM leave_days WHERE user_id = ? AND date LIKE ?`).all(user.id, `${yearMonth}-%`);
+    const leaves = db.prepare(`SELECT date, hours, comment FROM leave_days WHERE user_id = ? AND date LIKE ?`).all(user.id, `${yearMonth}-%`);
     const leaveMap = {};
-    leaves.forEach(l => { leaveMap[l.date] = l.hours; });
+    leaves.forEach(l => { leaveMap[l.date] = { hours: l.hours, comment: l.comment }; });
 
     const dailySecMap = {};
     wdList.forEach(d => { dailySecMap[d.date] = 0; });
@@ -387,8 +387,10 @@ async function refreshMonthData(user, yearMonth) {
     // ── Build result ───────────────────────────────────────────────────
     const workingDays = wdList.map(d => ({
         ...d,
-        standard: Math.max(0, d.standard - (leaveMap[d.date] || 0)),
-        logged: secToH(dailySecMap[d.date] || 0)
+        standard: Math.max(0, d.standard - (leaveMap[d.date]?.hours || 0)),
+        logged: secToH(dailySecMap[d.date] || 0),
+        leave_hours: leaveMap[d.date]?.hours || 0,
+        leave_comment: leaveMap[d.date]?.comment || ''
     }));
 
     const totalSecAll   = wdList.reduce((s, d) => s + (dailySecMap[d.date] || 0), 0);
@@ -450,10 +452,10 @@ function recalculateLocalMonthData(userId, ym) {
     const currentData = loadMonthData(userId, ym);
     if (!currentData) return null;
 
-    const leaves = db.prepare(`SELECT date, hours FROM leave_days WHERE user_id = ? AND date LIKE ?`)
+    const leaves = db.prepare(`SELECT date, hours, comment FROM leave_days WHERE user_id = ? AND date LIKE ?`)
         .all(userId, `${ym}-%`);
     const leaveMap = {};
-    leaves.forEach(l => { leaveMap[l.date] = l.hours; });
+    leaves.forEach(l => { leaveMap[l.date] = { hours: l.hours, comment: l.comment }; });
 
     const [yearStr, monthStr] = ym.split('-');
     const year = parseInt(yearStr);
@@ -465,8 +467,10 @@ function recalculateLocalMonthData(userId, ym) {
 
     const workingDays = wdList.map(d => ({
         ...d,
-        standard: Math.max(0, d.standard - (leaveMap[d.date] || 0)),
-        logged: loggedMap[d.date] || 0
+        standard: Math.max(0, d.standard - (leaveMap[d.date]?.hours || 0)),
+        logged: loggedMap[d.date] || 0,
+        leave_hours: leaveMap[d.date]?.hours || 0,
+        leave_comment: leaveMap[d.date]?.comment || ''
     }));
 
     const totalLogged = Math.round(workingDays.reduce((s, d) => s + d.logged, 0) * 100) / 100;

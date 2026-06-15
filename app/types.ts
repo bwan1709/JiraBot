@@ -32,6 +32,8 @@ export interface WorkingDay {
   is_saturday: boolean;
   standard: number;
   logged: number;
+  leave_hours?: number;
+  leave_comment?: string;
 }
 
 export interface MonthData {

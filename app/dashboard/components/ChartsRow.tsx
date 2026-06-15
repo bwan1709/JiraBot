@@ -14,6 +14,7 @@ const AMBER = '#f59e0b';
 const ROSE = '#f43f5e';
 const INDIGO = '#6366f1';
 const GREEN = '#10b981';
+const PURPLE = '#a855f7';
 
 const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const dayNum = (date: string) => String(parseInt(date.slice(8, 10), 10));
@@ -49,6 +50,7 @@ function Legend({ color: textColor }: { color: string }) {
       {item(TEAL, 'Đạt/Thừa')}
       {item(AMBER, 'Thiếu một phần')}
       {item(ROSE, 'Chưa log')}
+      {item(PURPLE, 'Nghỉ phép')}
       {item(INDIGO, 'Mức chuẩn', true)}
     </Space>
   );
@@ -81,23 +83,34 @@ function ChartsRow({ data, onSelectDate }: Props) {
   const todayIdx = wds.reduce((acc, d, idx) => (d.date <= today ? idx : acc), -1);
   const maxY = Math.max(20, ...wds.map((d) => Math.max(d.logged, d.standard))) + 2;
 
-  const statusOf = (logged: number, standard: number) => {
+  const statusOf = (logged: number, standard: number, leaveHours = 0) => {
+    if (leaveHours > 0) return 'Nghỉ phép';
     if (logged === 0) return 'Chưa log';
     if (logged >= standard) return 'Đạt/Thừa';
     return 'Thiếu một phần';
   };
-
+ 
   const colData = wds
     .map((d, i) => {
       const logged = Math.round(d.logged * 100) / 100;
+      const leaveHours = d.leave_hours || 0;
+      const hasLeave = leaveHours > 0;
+      
+      let displayHours = logged;
+      if (hasLeave && logged === 0) {
+        displayHours = leaveHours;
+      }
+      
       return {
         x: dayNum(d.date),
         date: d.date,
         full: fullDay(d.date),
-        hours: i <= todayIdx ? logged : null,
+        hours: (i <= todayIdx || hasLeave) ? displayHours : null,
+        hoursLogged: logged,
+        leaveHours: leaveHours,
         standard: d.standard,
         diff: Math.round((d.logged - d.standard) * 100) / 100,
-        status: statusOf(d.logged, d.standard),
+        status: statusOf(d.logged, d.standard, leaveHours),
       };
     })
     .filter((d) => d.hours !== null);
@@ -118,8 +131,8 @@ function ChartsRow({ data, onSelectDate }: Props) {
         colorField: 'status',
         scale: {
           color: {
-            domain: ['Đạt/Thừa', 'Thiếu một phần', 'Chưa log'],
-            range: [TEAL, AMBER, ROSE],
+            domain: ['Đạt/Thừa', 'Thiếu một phần', 'Chưa log', 'Nghỉ phép'],
+            range: [TEAL, AMBER, ROSE, PURPLE],
           },
           y: { domainMin: 0, domainMax: maxY },
         },
@@ -131,13 +144,14 @@ function ChartsRow({ data, onSelectDate }: Props) {
         tooltip: {
           title: (dd: any) => dd.full,
           items: [
-            (dd: any) => ({ name: 'Đã log', value: fmtH(dd.hours) }),
+            (dd: any) => ({ name: 'Đã log', value: fmtH(dd.hoursLogged) }),
+            (dd: any) => dd.leaveHours > 0 ? ({ name: 'Nghỉ phép', value: `${dd.leaveHours}h` }) : null,
             (dd: any) => ({ name: 'Giờ chuẩn', value: `${dd.standard}h` }),
             (dd: any) => ({
               name: dd.diff >= 0 ? 'Thừa' : 'Thiếu',
               value: `${dd.diff > 0 ? '+' : ''}${fmtH(dd.diff)}`,
             }),
-          ],
+          ].filter(Boolean),
         },
       },
       {
