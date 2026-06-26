@@ -221,19 +221,21 @@ export async function exportWord(
       ],
     });
 
-    // Fill up to 3 plan rows with next month's titles; pad the rest with blank rows
-    const planRowTexts = [
-      nextPlanTitles[0] ?? '',
-      nextPlanTitles[1] ?? '',
-      nextPlanTitles[2] ?? '',
-    ];
+    // Only render rows that have actual plan content; pad blank rows have no "Đang thực hiện"
+    const minPlanRows = Math.max(nextPlanTitles.length, 3);
+    const planRowTexts = Array.from({ length: minPlanRows }, (_, i) => nextPlanTitles[i] ?? '');
     const planTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
-        new TableRow({ children: [mkSpanCell('B/KẾ HOẠCH THÁNG', 1)] }),
-        new TableRow({ children: [mkCell([R(planRowTexts[0])])] }),
-        new TableRow({ children: [mkCell([R(planRowTexts[1])])] }),
-        new TableRow({ children: [mkCell([R(planRowTexts[2])])] }),
+        new TableRow({ children: [mkSpanCell('B/KẾ HOẠCH THÁNG', 2)] }),
+        ...planRowTexts.map(
+          (txt) => new TableRow({
+            children: [
+              mkCell([R(txt)], AlignmentType.LEFT, { width: { size: 80, type: WidthType.PERCENTAGE } }),
+              mkCellC([R(txt ? 'Đang thực hiện' : '')], { width: { size: 20, type: WidthType.PERCENTAGE } }),
+            ],
+          }),
+        ),
       ],
     });
 

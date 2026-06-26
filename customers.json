@@ -1,0 +1,1352 @@
+[
+  {
+    "stt": 1,
+    "customer_code": "4299761",
+    "legal_name": "Công Ty TNHH Truyền Thông Nhật Anh",
+    "value": "0100776420"
+  },
+  {
+    "stt": 2,
+    "customer_code": "4670213",
+    "legal_name": "Công Ty TNHH Truyền Thông Nhật Anh",
+    "value": "0100776420"
+  },
+  {
+    "stt": 3,
+    "customer_code": "4746922",
+    "legal_name": "Công Ty TNHH Truyền Thông Nhật Anh",
+    "value": "0100776420"
+  },
+  {
+    "stt": 4,
+    "customer_code": "4159356",
+    "legal_name": "Ngô Tùng Anh (HKD Siêu Thị 24H)",
+    "value": "001080044895"
+  },
+  {
+    "stt": 5,
+    "customer_code": "65010000003",
+    "legal_name": "Hộ Kinh Doanh FARM MART PQ",
+    "value": "001082017042"
+  },
+  {
+    "stt": 6,
+    "customer_code": "4768820",
+    "legal_name": "Hộ Kinh Doanh Z MART 3",
+    "value": "001087030190"
+  },
+  {
+    "stt": 7,
+    "customer_code": "4402971",
+    "legal_name": "Hộ Kinh Doanh Vũ Văn Hiệp",
+    "value": "001090044730"
+  },
+  {
+    "stt": 8,
+    "customer_code": "3667366",
+    "legal_name": "Trần Thị Huyền Trang",
+    "value": "001187001562"
+  },
+  {
+    "stt": 9,
+    "customer_code": "65010000020",
+    "legal_name": "Hộ Kinh Doanh Mỹ Linh",
+    "value": "1701271578"
+  },
+  {
+    "stt": 10,
+    "customer_code": "4784650",
+    "legal_name": "Phạm Thị Hương (Đông Hương)",
+    "value": "1701994400"
+  },
+  {
+    "stt": 11,
+    "customer_code": "4395584",
+    "legal_name": "Công Ty TNHH Một Thành Viên H A Phú Quốc",
+    "value": "1702009132"
+  },
+  {
+    "stt": 12,
+    "customer_code": "4692028",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 13,
+    "customer_code": "4732460",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 14,
+    "customer_code": "4768821",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 15,
+    "customer_code": "65010000015",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 16,
+    "customer_code": "65010000017",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 17,
+    "customer_code": "FHP2000002",
+    "legal_name": "Công Ty TNHH MTV Siêu Thị Đảo Ngọc Phú Quốc",
+    "value": "1702237474"
+  },
+  {
+    "stt": 18,
+    "customer_code": "65010000012",
+    "legal_name": "Công Ty TNHH Một Thành Viên Linh Sơn JY",
+    "value": "1702264929"
+  },
+  {
+    "stt": 19,
+    "customer_code": "4450194",
+    "legal_name": "Công Ty TNHH LeeVi Homestay",
+    "value": "1702265136"
+  },
+  {
+    "stt": 20,
+    "customer_code": "4638376",
+    "legal_name": "Công Ty TNHH Chợ Sạch 24H",
+    "value": "1702277406"
+  },
+  {
+    "stt": 21,
+    "customer_code": "4638557",
+    "legal_name": "Công Ty TNHH Chợ Sạch 24H",
+    "value": "1702277406"
+  },
+  {
+    "stt": 22,
+    "customer_code": "4893390",
+    "legal_name": "Công Ty TNHH Chợ Sạch 24H",
+    "value": "1702277406"
+  },
+  {
+    "stt": 23,
+    "customer_code": "3080920",
+    "legal_name": "Công Ty Cổ Phần Xu Hướng Mới Phú Quốc",
+    "value": "1702288038"
+  },
+  {
+    "stt": 24,
+    "customer_code": "4728578",
+    "legal_name": "Công Ty CP VIETNAM FRUITS AND MORE",
+    "value": "1702289673"
+  },
+  {
+    "stt": 25,
+    "customer_code": "FHP3000003",
+    "legal_name": "Công Ty Cổ Phần Thương Mại Long Beach",
+    "value": "1702297755"
+  },
+  {
+    "stt": 26,
+    "customer_code": "4741753",
+    "legal_name": "Công Ty TNHH Aloha Phú Quốc",
+    "value": "1702315073"
+  },
+  {
+    "stt": 27,
+    "customer_code": "65011000004",
+    "legal_name": "Công Ty TNHH KINGKONG PQ",
+    "value": "1702329333"
+  },
+  {
+    "stt": 28,
+    "customer_code": "65010000022",
+    "legal_name": "Công Ty TNHH Thương Mại Grand Mart Phú Quốc",
+    "value": "1702345409"
+  },
+  {
+    "stt": 29,
+    "customer_code": "4467690",
+    "legal_name": "Đinh Thùy Diệu Anh",
+    "value": "008198008055"
+  },
+  {
+    "stt": 30,
+    "customer_code": "FHP3000006",
+    "legal_name": "Nguyễn Thị Hà (Hộ Kinh Doanh Siêu Thị Hà Anh)",
+    "value": "026171000755"
+  },
+  {
+    "stt": 31,
+    "customer_code": "4543068",
+    "legal_name": "Hoàng Ngọc Tân",
+    "value": "22085000221"
+  },
+  {
+    "stt": 32,
+    "customer_code": "3966803",
+    "legal_name": "Đoàn Thị Hồng Anh",
+    "value": "22172002503"
+  },
+  {
+    "stt": 33,
+    "customer_code": "3246991",
+    "legal_name": "Phạm Văn Mạnh",
+    "value": "26091010428"
+  },
+  {
+    "stt": 34,
+    "customer_code": "4646566",
+    "legal_name": "Phạm Văn Mạnh",
+    "value": "26091010428"
+  },
+  {
+    "stt": 35,
+    "customer_code": "65010000018",
+    "legal_name": "Hộ Kinh Doanh LINDAMART",
+    "value": "26091013483"
+  },
+  {
+    "stt": 36,
+    "customer_code": "65010000016",
+    "legal_name": "Vũ Văn Linh (KHD ELEVEN MART)",
+    "value": "26098003504"
+  },
+  {
+    "stt": 37,
+    "customer_code": "2927494",
+    "legal_name": "Nguyễn Thị Hải (HKD Ba Za Mát)",
+    "value": "26170002306"
+  },
+  {
+    "stt": 38,
+    "customer_code": "4860403",
+    "legal_name": "Hộ Kinh Doanh IRIS MART",
+    "value": "26193001647"
+  },
+  {
+    "stt": 39,
+    "customer_code": "65010000006",
+    "legal_name": "HKD Siêu Thị Hiệp Hưng (Siêu Thị Gia Đình)",
+    "value": "26194003612"
+  },
+  {
+    "stt": 40,
+    "customer_code": "2927064",
+    "legal_name": "Cao Tiến Dũng",
+    "value": "30083015642"
+  },
+  {
+    "stt": 41,
+    "customer_code": "4053960",
+    "legal_name": "Hộ Kinh Doanh ZMART 1 Sỉ Và Lẻ",
+    "value": "30180011483"
+  },
+  {
+    "stt": 42,
+    "customer_code": "4654580",
+    "legal_name": "Trần Thị Hội",
+    "value": "30188006600"
+  },
+  {
+    "stt": 43,
+    "customer_code": "2927402",
+    "legal_name": "Nguyễn Trọng Bắc",
+    "value": "31074018310"
+  },
+  {
+    "stt": 44,
+    "customer_code": "2926959",
+    "legal_name": "Vũ Thị Hoàng Quyên (Nắng)",
+    "value": "31168017778"
+  },
+  {
+    "stt": 45,
+    "customer_code": "2927666",
+    "legal_name": "Đinh Thị Mỵ (HKD Tạp Hoá Thuỳ Mỵ)",
+    "value": "34169007492"
+  },
+  {
+    "stt": 46,
+    "customer_code": "2927501",
+    "legal_name": "Trương Thu Hiền",
+    "value": "34187017075"
+  },
+  {
+    "stt": 47,
+    "customer_code": "3886864",
+    "legal_name": "Hộ Kinh Doanh Bách Hóa Tổng Hợp K+ MARK",
+    "value": "35056002578"
+  },
+  {
+    "stt": 48,
+    "customer_code": "4850714",
+    "legal_name": "Vũ Văn Chiến",
+    "value": "35082012571"
+  },
+  {
+    "stt": 49,
+    "customer_code": "4846269",
+    "legal_name": "Hộ Kinh Doanh BB MART",
+    "value": "35196008403"
+  },
+  {
+    "stt": 50,
+    "customer_code": "3821928",
+    "legal_name": "Công ty TNHH King Kong PQ",
+    "value": "1702329333"
+  },
+  {
+    "stt": 51,
+    "customer_code": "4654247",
+    "legal_name": "Công ty TNHH King Kong PQ",
+    "value": "1702329333"
+  },
+  {
+    "stt": 52,
+    "customer_code": "2927459",
+    "legal_name": "Nguyễn Thanh Hoàn",
+    "value": "36077020044"
+  },
+  {
+    "stt": 53,
+    "customer_code": "4318910",
+    "legal_name": "Nguyễn Thanh Hoàn",
+    "value": "36077020044"
+  },
+  {
+    "stt": 54,
+    "customer_code": "65010000019",
+    "legal_name": "Công Ty TNHH Thương Mại Dịch Vụ G MART",
+    "value": "1702347526"
+  },
+  {
+    "stt": 55,
+    "customer_code": "4324899",
+    "legal_name": "Nguyễn Văn Hùng",
+    "value": "36090000965"
+  },
+  {
+    "stt": 56,
+    "customer_code": "4741527",
+    "legal_name": "Hộ Kinh Doanh Bán Buôn Bản Lẻ - Đặc Sản Phú Quốc",
+    "value": "36200000017"
+  },
+  {
+    "stt": 57,
+    "customer_code": "4841988",
+    "legal_name": "Trần Thanh Bình (Du Gong Phú Quốc)",
+    "value": "37077003104"
+  },
+  {
+    "stt": 58,
+    "customer_code": "2926946",
+    "legal_name": "Lê Thị Tương",
+    "value": "38165011140"
+  },
+  {
+    "stt": 59,
+    "customer_code": "65010000001",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Tiện Lợi MOON MART",
+    "value": "38192000293"
+  },
+  {
+    "stt": 60,
+    "customer_code": "65010000002",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Tiện Lợi MOON MART",
+    "value": "38192000293"
+  },
+  {
+    "stt": 61,
+    "customer_code": "65010000026",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Tiện Lợi MOON MART",
+    "value": "38192000293"
+  },
+  {
+    "stt": 62,
+    "customer_code": "65010000011",
+    "legal_name": "Đoàn Thị Lộc",
+    "value": "38193018215"
+  },
+  {
+    "stt": 63,
+    "customer_code": "2926947",
+    "legal_name": "Lê Mai Thảo (HKD Thảo Hải)",
+    "value": "42067009210"
+  },
+  {
+    "stt": 64,
+    "customer_code": "4050510",
+    "legal_name": "Hộ Kinh Doanh Hòn Mây Rút Trong Restaurant",
+    "value": "42088010947"
+  },
+  {
+    "stt": 65,
+    "customer_code": "4470804",
+    "legal_name": "Hộ Kinh Doanh Hòn Mây Rút Trong Restaurant",
+    "value": "42088010947"
+  },
+  {
+    "stt": 66,
+    "customer_code": "4470969",
+    "legal_name": "Hộ Kinh Doanh Hòn Mây Rút Trong Restaurant",
+    "value": "42088010947"
+  },
+  {
+    "stt": 67,
+    "customer_code": "2927484",
+    "legal_name": "Trần Thị Giang Châu",
+    "value": "42177001752"
+  },
+  {
+    "stt": 68,
+    "customer_code": "2927033",
+    "legal_name": "Mai Thị Thắm (Hkd Anh Minh Bến Tràm)",
+    "value": "42182011960"
+  },
+  {
+    "stt": 69,
+    "customer_code": "65012000004",
+    "legal_name": "Trần Thị Thanh Tâm",
+    "value": "42189016234"
+  },
+  {
+    "stt": 70,
+    "customer_code": "65010000004",
+    "legal_name": "Hộ Kinh Doanh Mango Mart",
+    "value": "42190010664"
+  },
+  {
+    "stt": 71,
+    "customer_code": "4159357",
+    "legal_name": "Hộ Kinh Doanh Trọng Mỹ Mart",
+    "value": "44090004601"
+  },
+  {
+    "stt": 72,
+    "customer_code": "4450392",
+    "legal_name": "Hộ Kinh Doanh Trọng Mỹ Mart",
+    "value": "44090004601"
+  },
+  {
+    "stt": 73,
+    "customer_code": "4732461",
+    "legal_name": "Hộ Kinh Doanh Trọng Mỹ Mart",
+    "value": "44090004601"
+  },
+  {
+    "stt": 74,
+    "customer_code": "4800676",
+    "legal_name": "Hộ Kinh Doanh Trọng Mỹ Mart",
+    "value": "44090004601"
+  },
+  {
+    "stt": 75,
+    "customer_code": "2927491",
+    "legal_name": "Trần Thị Thuyên",
+    "value": "44168007342"
+  },
+  {
+    "stt": 76,
+    "customer_code": "4623659",
+    "legal_name": "Hộ Kinh Doanh Dugong Mart",
+    "value": "44191009150"
+  },
+  {
+    "stt": 77,
+    "customer_code": "3886862",
+    "legal_name": "Lê Thị Bốn",
+    "value": "45192006591"
+  },
+  {
+    "stt": 78,
+    "customer_code": "4846270",
+    "legal_name": "Nguyễn Phạm Khương Duy",
+    "value": "46083000163"
+  },
+  {
+    "stt": 79,
+    "customer_code": "4869555",
+    "legal_name": "Nguyễn Thị Mỹ Linh",
+    "value": "46193000247"
+  },
+  {
+    "stt": 80,
+    "customer_code": "4465594",
+    "legal_name": "Hộ Kinh Doanh Trung Tâm Mua Sắm Đặc Sản Phú Quốc Hương Đảo",
+    "value": "049086006382"
+  },
+  {
+    "stt": 81,
+    "customer_code": "2927062",
+    "legal_name": "Trần Thị Văn",
+    "value": "51166003857"
+  },
+  {
+    "stt": 82,
+    "customer_code": "2927500",
+    "legal_name": "Võ Thị Mỹ Huệ",
+    "value": "51191013684"
+  },
+  {
+    "stt": 83,
+    "customer_code": "4465596",
+    "legal_name": "Võ Thị Mỹ Huệ",
+    "value": "51191013684"
+  },
+  {
+    "stt": 84,
+    "customer_code": "2927035",
+    "legal_name": "Huỳnh Thị Hồng",
+    "value": "52173014267"
+  },
+  {
+    "stt": 85,
+    "customer_code": "3497682",
+    "legal_name": "Phạm Thị Huệ",
+    "value": "52182001814"
+  },
+  {
+    "stt": 86,
+    "customer_code": "2927480",
+    "legal_name": "Nguyễn Thị Thúy Hằng",
+    "value": "52184008520"
+  },
+  {
+    "stt": 87,
+    "customer_code": "65010000005",
+    "legal_name": "Hộ Kinh Doanh SUPERMART",
+    "value": "58090009500"
+  },
+  {
+    "stt": 88,
+    "customer_code": "4391509",
+    "legal_name": "Hộ Kinh Doanh Chú Khỉ Vui Vẻ",
+    "value": "68088009879"
+  },
+  {
+    "stt": 89,
+    "customer_code": "4670215",
+    "legal_name": "Công Ty TNHH Thương Mại Dịch Vụ GOLDEN RETAIL",
+    "value": "1702347685"
+  },
+  {
+    "stt": 90,
+    "customer_code": "4768819",
+    "legal_name": "Công Ty TNHH Thương Mại Dịch Vụ GOLDEN RETAIL",
+    "value": "1702347685"
+  },
+  {
+    "stt": 91,
+    "customer_code": "4362609",
+    "legal_name": "Công Ty TNHH Quỳnh Chi Phú Quốc",
+    "value": "1702352558"
+  },
+  {
+    "stt": 92,
+    "customer_code": "2927406",
+    "legal_name": "Trần Thị Thu Hiền",
+    "value": "79176003882"
+  },
+  {
+    "stt": 93,
+    "customer_code": "4391513",
+    "legal_name": "Công Ty TNHH Thương Mại Dịch Vụ Đầu Tư B&B",
+    "value": "1702266531"
+  },
+  {
+    "stt": 94,
+    "customer_code": "3842247",
+    "legal_name": "Lê Hoài Vũ",
+    "value": "80078022919"
+  },
+  {
+    "stt": 95,
+    "customer_code": "3775605",
+    "legal_name": "Lương Thị Chúc (HKD Biển Khơi)",
+    "value": "80174005132"
+  },
+  {
+    "stt": 96,
+    "customer_code": "4697064",
+    "legal_name": "Lương Thị Chúc (HKD Biển Khơi)",
+    "value": "80174005132"
+  },
+  {
+    "stt": 97,
+    "customer_code": "4861227",
+    "legal_name": "Hộ Kinh Doanh Hồ Văn Thơm",
+    "value": "89074018554"
+  },
+  {
+    "stt": 98,
+    "customer_code": "4597584",
+    "legal_name": "Hộ Kinh Doanh Bách Hoá Tổng Hợp Minh Thương",
+    "value": "89158011630"
+  },
+  {
+    "stt": 99,
+    "customer_code": "4670295",
+    "legal_name": "HKD Cửa Hàng Tiện Ích Siêu Rẻ 33 Cửa Cạn",
+    "value": "89187016206"
+  },
+  {
+    "stt": 100,
+    "customer_code": "4033831",
+    "legal_name": "Trần Thị Thuý Em (HKD Cửa Hàng Tiện Ích",
+    "value": "89189006294"
+  },
+  {
+    "stt": 101,
+    "customer_code": "3674802",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Ông Táo",
+    "value": "89193001334"
+  },
+  {
+    "stt": 102,
+    "customer_code": "3599779",
+    "legal_name": "Trần Thị Quê Hương (HKD Thành Đạt)",
+    "value": "89193003694"
+  },
+  {
+    "stt": 103,
+    "customer_code": "4887074",
+    "legal_name": "Trần Công Vinh (HKD Cửa Hàng Tiện ích Siêu Rẻ 33 Hàm Ninh)",
+    "value": "89204002029"
+  },
+  {
+    "stt": 104,
+    "customer_code": "3544480",
+    "legal_name": "Lê Hữu Phước (HKD Phước Hạnh)",
+    "value": "91067000208"
+  },
+  {
+    "stt": 105,
+    "customer_code": "2927464",
+    "legal_name": "Hồ Văn Tám (Tám - Minh)",
+    "value": "91068000756"
+  },
+  {
+    "stt": 106,
+    "customer_code": "3473125",
+    "legal_name": "Đặng Văn Hận (Hận Hưng)",
+    "value": "91084000591"
+  },
+  {
+    "stt": 107,
+    "customer_code": "FHP3000001",
+    "legal_name": "Hộ Kinh Doanh Hộ Kinh Doanh Home Mart",
+    "value": "91086019337"
+  },
+  {
+    "stt": 108,
+    "customer_code": "3886860",
+    "legal_name": "Nguyễn Quang Phương (Quang Phương)",
+    "value": "91089008873"
+  },
+  {
+    "stt": 109,
+    "customer_code": "2927678",
+    "legal_name": "Huỳnh Quang Đạo (HKD Tạp Hóa Xuân)",
+    "value": "91089017008"
+  },
+  {
+    "stt": 110,
+    "customer_code": "65012000003",
+    "legal_name": "Hộ Kinh Doanh Daily Mart",
+    "value": "91090002196"
+  },
+  {
+    "stt": 111,
+    "customer_code": "4670296",
+    "legal_name": "Hoàng Nhật Tân",
+    "value": "91093008871"
+  },
+  {
+    "stt": 112,
+    "customer_code": "4794017",
+    "legal_name": "Lê Việt Hùng ( ALO MART)",
+    "value": "91094011568"
+  },
+  {
+    "stt": 113,
+    "customer_code": "65013000001",
+    "legal_name": "Hộ Kinh Doanh C - Mart",
+    "value": "91094013971"
+  },
+  {
+    "stt": 114,
+    "customer_code": "4239072",
+    "legal_name": "Chiêu Phước Lộc",
+    "value": "91095000741"
+  },
+  {
+    "stt": 115,
+    "customer_code": "4394326",
+    "legal_name": "Lê Minh Cường",
+    "value": "91095002257"
+  },
+  {
+    "stt": 116,
+    "customer_code": "3672421",
+    "legal_name": "Huỳnh Viễn Thanh (Huỳnh Ký)",
+    "value": "91095010445"
+  },
+  {
+    "stt": 117,
+    "customer_code": "2927610",
+    "legal_name": "Nguyễn Tấn An (HKD Đức Thạnh 2)",
+    "value": "91096014112"
+  },
+  {
+    "stt": 118,
+    "customer_code": "2962327",
+    "legal_name": "Nguyễn Tấn An (HKD Đức Thạnh 2)",
+    "value": "91096014112"
+  },
+  {
+    "stt": 119,
+    "customer_code": "4416543",
+    "legal_name": "Nguyễn Tấn An (HKD Đức Thạnh 2)",
+    "value": "91096014112"
+  },
+  {
+    "stt": 120,
+    "customer_code": "4817127",
+    "legal_name": "Nguyễn Tấn An (HKD Đức Thạnh 2)",
+    "value": "91096014112"
+  },
+  {
+    "stt": 121,
+    "customer_code": "65010000010",
+    "legal_name": "Văn Việt Ngoãn",
+    "value": "91099005298"
+  },
+  {
+    "stt": 122,
+    "customer_code": "2926997",
+    "legal_name": "Phạm Thị Bông",
+    "value": "91160000229"
+  },
+  {
+    "stt": 123,
+    "customer_code": "2927557",
+    "legal_name": "Lê Thị Dân",
+    "value": "91164011513"
+  },
+  {
+    "stt": 124,
+    "customer_code": "2927004",
+    "legal_name": "Huỳnh Ngọc Yến",
+    "value": "91167004226"
+  },
+  {
+    "stt": 125,
+    "customer_code": "2927050",
+    "legal_name": "Huỳnh Thị Hiền",
+    "value": "91168000961"
+  },
+  {
+    "stt": 126,
+    "customer_code": "2927026",
+    "legal_name": "Nguyễn Kim Phượng",
+    "value": "91169010542"
+  },
+  {
+    "stt": 127,
+    "customer_code": "2927063",
+    "legal_name": "Nguyễn Hoàng Thị Uy",
+    "value": "91169013033"
+  },
+  {
+    "stt": 128,
+    "customer_code": "4873062",
+    "legal_name": "Ngô Thị Phương Thảo",
+    "value": "91169014314"
+  },
+  {
+    "stt": 129,
+    "customer_code": "2927511",
+    "legal_name": "Ngô Thị Mai",
+    "value": "91170011250"
+  },
+  {
+    "stt": 130,
+    "customer_code": "2927547",
+    "legal_name": "Nguyễn Thị Mỹ",
+    "value": "91174008176"
+  },
+  {
+    "stt": 131,
+    "customer_code": "4806351",
+    "legal_name": "Cao Thị Minh Tâm",
+    "value": "91175001487"
+  },
+  {
+    "stt": 132,
+    "customer_code": "3667407",
+    "legal_name": "Mai Thanh Phương",
+    "value": "91176005866"
+  },
+  {
+    "stt": 133,
+    "customer_code": "2926955",
+    "legal_name": "Lê Thu Huệ",
+    "value": "91179003880"
+  },
+  {
+    "stt": 134,
+    "customer_code": "3670704",
+    "legal_name": "Bùi Thị Kim Thu",
+    "value": "91179004425"
+  },
+  {
+    "stt": 135,
+    "customer_code": "3857713",
+    "legal_name": "Hộ Kinh Doanh Kiều Như",
+    "value": "91180002091"
+  },
+  {
+    "stt": 136,
+    "customer_code": "2927438",
+    "legal_name": "Lê Thị Lệ",
+    "value": "91181016625"
+  },
+  {
+    "stt": 137,
+    "customer_code": "3599774",
+    "legal_name": "Hộ Kinh Doanh Loan Đỏ",
+    "value": "91183005274"
+  },
+  {
+    "stt": 138,
+    "customer_code": "3385788",
+    "legal_name": "Nguyễn Thị Mỹ Quyên (HKD H M)",
+    "value": "91183007977"
+  },
+  {
+    "stt": 139,
+    "customer_code": "2926913",
+    "legal_name": "Đào Thị Thanh Thảo",
+    "value": "91183019754"
+  },
+  {
+    "stt": 140,
+    "customer_code": "4617161",
+    "legal_name": "Hộ Kinh Doanh Thanh Hứa",
+    "value": "91184000753"
+  },
+  {
+    "stt": 141,
+    "customer_code": "4784756",
+    "legal_name": "Võ Thị Trúc Ly",
+    "value": "91184001539"
+  },
+  {
+    "stt": 142,
+    "customer_code": "4869556",
+    "legal_name": "Lê Ngọc Bích",
+    "value": "91185001500"
+  },
+  {
+    "stt": 143,
+    "customer_code": "4290136",
+    "legal_name": "Phan Thị Xuân Thu (HKD Ngân Phát Mart)",
+    "value": "91185004913"
+  },
+  {
+    "stt": 144,
+    "customer_code": "65010000021",
+    "legal_name": "Lương Kim Hoàng",
+    "value": "91185008619"
+  },
+  {
+    "stt": 145,
+    "customer_code": "2927434",
+    "legal_name": "Lương Thị Nguyên",
+    "value": "91187001921"
+  },
+  {
+    "stt": 146,
+    "customer_code": "3650983",
+    "legal_name": "Hộ Kinh Doanh Tạp Hoá Huỳnh Trang",
+    "value": "91187011665"
+  },
+  {
+    "stt": 147,
+    "customer_code": "3467271",
+    "legal_name": "Hứa Thị Cúc",
+    "value": "91187015851"
+  },
+  {
+    "stt": 148,
+    "customer_code": "2950249",
+    "legal_name": "Hộ Kinh Doanh Cửa Hàng Tiện Lợi Bùi Mart 2",
+    "value": "91188000887"
+  },
+  {
+    "stt": 149,
+    "customer_code": "4854490",
+    "legal_name": "HKD Cửa Hàng Tiện Ích Siêu Rẻ 33",
+    "value": "91188012771"
+  },
+  {
+    "stt": 150,
+    "customer_code": "4751844",
+    "legal_name": "Lê Thị Thúy",
+    "value": "91188014637"
+  },
+  {
+    "stt": 151,
+    "customer_code": "2926971",
+    "legal_name": "Hình Thị Ái Nghiềl",
+    "value": "91190014315"
+  },
+  {
+    "stt": 152,
+    "customer_code": "4893743",
+    "legal_name": "Nguyễn Thị Ngọc Em",
+    "value": "91190019255"
+  },
+  {
+    "stt": 153,
+    "customer_code": "2927405",
+    "legal_name": "Hộ Kinh Doanh C M A R T 3",
+    "value": "91191010482"
+  },
+  {
+    "stt": 154,
+    "customer_code": "2927407",
+    "legal_name": "Hộ Kinh Doanh C M A R T 3",
+    "value": "91191010482"
+  },
+  {
+    "stt": 155,
+    "customer_code": "2927591",
+    "legal_name": "Hộ Kinh Doanh C M A R T 3",
+    "value": "91191010482"
+  },
+  {
+    "stt": 156,
+    "customer_code": "65010000014",
+    "legal_name": "Hộ Kinh Doanh C M A R T 3",
+    "value": "91191010482"
+  },
+  {
+    "stt": 157,
+    "customer_code": "3654883",
+    "legal_name": "Phan Thị Nga",
+    "value": "91192017767"
+  },
+  {
+    "stt": 158,
+    "customer_code": "3403227",
+    "legal_name": "Ngô Thị Hồng Diễm",
+    "value": "91192018869"
+  },
+  {
+    "stt": 159,
+    "customer_code": "FHP2000004",
+    "legal_name": "Trần Tố Hoa (Đảo Xanh)",
+    "value": "91197009046"
+  },
+  {
+    "stt": 160,
+    "customer_code": "4815544",
+    "legal_name": "Nguyễn Ngọc Nhi",
+    "value": "91199001188"
+  },
+  {
+    "stt": 161,
+    "customer_code": "65010000024",
+    "legal_name": "Nguyễn Thị Trang",
+    "value": "91302000610"
+  },
+  {
+    "stt": 162,
+    "customer_code": "65010000028",
+    "legal_name": "Nguyễn Thị Trang",
+    "value": "91302000610"
+  },
+  {
+    "stt": 163,
+    "customer_code": "3652198",
+    "legal_name": "Nguyễn Thành Phú",
+    "value": "92074003226"
+  },
+  {
+    "stt": 164,
+    "customer_code": "4861226",
+    "legal_name": "Lê Ngọc Thanh",
+    "value": "92077006011"
+  },
+  {
+    "stt": 165,
+    "customer_code": "4547418",
+    "legal_name": "Phạm Hoàng Khải",
+    "value": "92083014630"
+  },
+  {
+    "stt": 166,
+    "customer_code": "4815539",
+    "legal_name": "Hộ Kinh Doanh Tạp Hoá Cô Thuỷ",
+    "value": "92089013959"
+  },
+  {
+    "stt": 167,
+    "customer_code": "3246846",
+    "legal_name": "Nguyễn Song Được",
+    "value": "92097003874"
+  },
+  {
+    "stt": 168,
+    "customer_code": "3686810",
+    "legal_name": "Nguyễn Kim Phụng",
+    "value": "92304003222"
+  },
+  {
+    "stt": 169,
+    "customer_code": "FHP2000003",
+    "legal_name": "Hộ Kinh Doanh Tạp Hóa Gia Hân Nhỏ",
+    "value": "93094003868"
+  },
+  {
+    "stt": 170,
+    "customer_code": "4617162",
+    "legal_name": "Nguyễn Thị Minh Trang",
+    "value": "93194006906"
+  },
+  {
+    "stt": 171,
+    "customer_code": "4693238",
+    "legal_name": "Nguyễn Yến Nhi ( (HKD SHOP KIM NGÂN)",
+    "value": "96189018129"
+  },
+  {
+    "stt": 172,
+    "customer_code": "2927032",
+    "legal_name": "Huỳnh Thị Kim Chi",
+    "value": "91174001682"
+  },
+  {
+    "stt": 173,
+    "customer_code": "2927028",
+    "legal_name": "Phan Văn Xuân",
+    "value": "091058000557"
+  },
+  {
+    "stt": 174,
+    "customer_code": "4739909",
+    "legal_name": "Chi Nhánh Phú Quốc - Công Ty TNHH Đầu Tư Và Xuất Nhập Khẩu Việt ý",
+    "value": "0107735529-004"
+  },
+  {
+    "stt": 175,
+    "customer_code": "65010000013",
+    "legal_name": "Công Ty TNHH Vesta Stone Steak-Chi Nhánh",
+    "value": "0315761262-002"
+  },
+  {
+    "stt": 176,
+    "customer_code": "65013000005",
+    "legal_name": "Công Ty TNHH Thương Mại Dịch Vụ GOLDEN RETAIL",
+    "value": "1702347685"
+  },
+  {
+    "stt": 177,
+    "customer_code": "4514475",
+    "legal_name": "Công Ty TNHH Thương Mại Dịch Vụ GOLDEN RETAIL",
+    "value": "1702347685"
+  },
+  {
+    "stt": 178,
+    "customer_code": "4177975",
+    "legal_name": "Hồ Thị Thuỳ Dương (HKD STAR MART)",
+    "value": "091180007002"
+  },
+  {
+    "stt": 179,
+    "customer_code": "4846268",
+    "legal_name": "Công Ty TNHH Sản Xuất  Và Thương Mại Dịch vụ Đảo Yến",
+    "value": "1702163286"
+  },
+  {
+    "stt": 180,
+    "customer_code": "65010000009",
+    "legal_name": "Chi Nhánh Công Ty Trách Nhiệm Hữu Hạn Cherry Blossom",
+    "value": "4201677448-004"
+  },
+  {
+    "stt": 181,
+    "customer_code": "4739910",
+    "legal_name": "Hộ Kinh Doanh Diệp Mart",
+    "value": "091194014219"
+  },
+  {
+    "stt": 182,
+    "customer_code": "2927038",
+    "legal_name": "Hộ Kinh Doanh Tạp Hoá Thu Thảo",
+    "value": "052187009821"
+  },
+  {
+    "stt": 183,
+    "customer_code": "3582950",
+    "legal_name": "Hộ Kinh Doanh Tạp Hoá Hường Hưng",
+    "value": "091197013071"
+  },
+  {
+    "stt": 184,
+    "customer_code": "4010563",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Kim Thạnh",
+    "value": "091099008803"
+  },
+  {
+    "stt": 185,
+    "customer_code": "4311594",
+    "legal_name": "Hộ Kinh Doanh B & K MART",
+    "value": "086093005984"
+  },
+  {
+    "stt": 186,
+    "customer_code": "4646431",
+    "legal_name": "Công Ty Trách Nhiệm Hữu Hạn Thiên Thanh",
+    "value": "1700450655"
+  },
+  {
+    "stt": 187,
+    "customer_code": "4670291",
+    "legal_name": "Hộ Kinh Doanh Tạp Hóa Phương Nga",
+    "value": "091192001445"
+  },
+  {
+    "stt": 188,
+    "customer_code": "4787233",
+    "legal_name": "Chi Nhánh Công Ty TNHH Thủy Thiên Thanh",
+    "value": "0401495310-002"
+  },
+  {
+    "stt": 189,
+    "customer_code": "4841978",
+    "legal_name": "Hộ Kinh Doanh Phương Bình",
+    "value": "035171009417"
+  },
+  {
+    "stt": 190,
+    "customer_code": "65010000027",
+    "legal_name": "Hộ Kinh Doanh CO SI A NA",
+    "value": "001067002106"
+  },
+  {
+    "stt": 191,
+    "customer_code": "65010000029",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 192,
+    "customer_code": "65010000032",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 193,
+    "customer_code": "65010000036",
+    "legal_name": "CÔNG TY TNHH TM DV DL QUỐC HƯNG",
+    "value": "1702355559"
+  },
+  {
+    "stt": 194,
+    "customer_code": "65010000039",
+    "legal_name": "Công Ty TNHH Chợ Sạch 24H",
+    "value": "1702277406"
+  },
+  {
+    "stt": 195,
+    "customer_code": "65010000044",
+    "legal_name": "Công Ty TNHH Chợ Sạch 24H",
+    "value": "1702277406"
+  },
+  {
+    "stt": 196,
+    "customer_code": "65010000045",
+    "legal_name": "Công Ty TNHH Chợ Sạch 24H",
+    "value": "1702277406"
+  },
+  {
+    "stt": 197,
+    "customer_code": "65013000003",
+    "legal_name": "CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ GOLDEN RETAIL",
+    "value": "1702347685"
+  },
+  {
+    "stt": 198,
+    "customer_code": "FHP3000004",
+    "legal_name": "Công Ty TNHH Eco Phú Quốc",
+    "value": "1702263604"
+  },
+  {
+    "stt": 199,
+    "customer_code": "4841978",
+    "legal_name": "Hộ Kinh Doanh Phương Bình",
+    "value": "035171009417"
+  },
+  {
+    "stt": 200,
+    "customer_code": "4846305",
+    "legal_name": "Hộ Kinh Doanh Hương Thịnh Store",
+    "value": "091190023903"
+  },
+  {
+    "stt": 201,
+    "customer_code": "4853800",
+    "legal_name": "Công Ty TNHH Quỳnh Chi Phú Quốc",
+    "value": "1702352558"
+  },
+  {
+    "stt": 202,
+    "customer_code": "4888233",
+    "legal_name": "Công Ty TNHH Thương Mại Grand Mart Phú Quốc",
+    "value": "1702345409"
+  },
+  {
+    "stt": 203,
+    "customer_code": "65010000007",
+    "legal_name": "Công ty TNHH Sản Xuất và Thương Mại Dịch Vụ Đảo Yến",
+    "value": "1702163286"
+  },
+  {
+    "stt": 204,
+    "customer_code": "65010000030",
+    "legal_name": "Hộ Kinh Doanh Lê Kim Long",
+    "value": "034058023729"
+  },
+  {
+    "stt": 205,
+    "customer_code": "65010000031",
+    "legal_name": "Nguyễn Văn Mạnh (HKD MINI MARKET 88)",
+    "value": "026083015647"
+  },
+  {
+    "stt": 206,
+    "customer_code": "65010000034",
+    "legal_name": "Công Ty TNHH Thương Mại Grand Mart Phú Quốc",
+    "value": "1702345409"
+  },
+  {
+    "stt": 207,
+    "customer_code": "65010000035",
+    "legal_name": "Công Ty TNHH Thương Mại Grand Mart Phú Quốc",
+    "value": "1702345409"
+  },
+  {
+    "stt": 208,
+    "customer_code": "65010000037",
+    "legal_name": "Vũ Thị Ngọc Liễu",
+    "value": "036180004828"
+  },
+  {
+    "stt": 209,
+    "customer_code": "65010000038",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Tiện Lợi MOON MART",
+    "value": "038192000293"
+  },
+  {
+    "stt": 210,
+    "customer_code": "65010000040",
+    "legal_name": "Trần Thị Giang Châu",
+    "value": "042177001752"
+  },
+  {
+    "stt": 211,
+    "customer_code": "65010000041",
+    "legal_name": "Công Ty TNHH Thương Mại Grand Mart Phú Quốc",
+    "value": "1702345409"
+  },
+  {
+    "stt": 212,
+    "customer_code": "65010000042",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Tiện Lợi MOON MART",
+    "value": "038192000293"
+  },
+  {
+    "stt": 213,
+    "customer_code": "65010000043",
+    "legal_name": "Công Ty TNHH Thương Mại Grand Mart Phú Quốc",
+    "value": "1702345409"
+  },
+  {
+    "stt": 214,
+    "customer_code": "65010000046",
+    "legal_name": "Hộ Kinh Doanh Siêu Thị Tiện Lợi MOON MART",
+    "value": "038192000293"
+  },
+  {
+    "stt": 215,
+    "customer_code": "65010000047",
+    "legal_name": "Hộ Kinh Doanh Moon Mart 2",
+    "value": "034197009021"
+  },
+  {
+    "stt": 216,
+    "customer_code": "65011000005",
+    "legal_name": "CÔNG TY TNHH ASIA AIRPORT",
+    "value": "4201779873"
+  },
+  {
+    "stt": 217,
+    "customer_code": "65011000007",
+    "legal_name": "Hộ KINH DOANH O A H U TIKI BAR",
+    "value": "091191017383"
+  },
+  {
+    "stt": 218,
+    "customer_code": "65011000014",
+    "legal_name": "Công ty Cổ Phần Đầu Tư Và Phát Triển Du Lịch Phú Quốc",
+    "value": "1701971178"
+  },
+  {
+    "stt": 219,
+    "customer_code": "65013000002",
+    "legal_name": "Trần Thị Hội",
+    "value": "030188006600"
+  },
+  {
+    "stt": 220,
+    "customer_code": "65013000004",
+    "legal_name": "Nguyễn Văn Trãy",
+    "value": "082073003445"
+  },
+  {
+    "stt": 221,
+    "customer_code": "65013000006",
+    "legal_name": "Trịnh Thị Thu Hà",
+    "value": "017183005011"
+  },
+  {
+    "stt": 222,
+    "customer_code": "65013000007",
+    "legal_name": "Hồ Tuyết Mãy",
+    "value": "091183017561"
+  },
+  {
+    "stt": 223,
+    "customer_code": "65013000008",
+    "legal_name": "Trịnh Văn Đại",
+    "value": "036090003987"
+  },
+  {
+    "stt": 224,
+    "customer_code": "65013000009",
+    "legal_name": "Hộ Kinh Doanh Hương Thịnh Store",
+    "value": "091190023903"
+  },
+  {
+    "stt": 225,
+    "customer_code": "65013000010",
+    "legal_name": "Công Ty Cổ Phần Hàng Miễn Thuế Chợ Đêm",
+    "value": "1702308245"
+  }
+]
