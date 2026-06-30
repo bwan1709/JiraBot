@@ -124,12 +124,12 @@ async function refreshMonthData(user, yearMonth) {
     const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
         searchAll(
             user,
-            `worklogAuthor = '${user.account_id}' AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}') OR (cf[10009] is empty AND resolved is not empty AND resolved >= '${startDate}' AND resolved <= '${endDate}') OR (cf[10009] is empty AND resolved is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}'))`,
+            `worklogAuthor = '${user.account_id}' AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is not empty AND resolved >= '${startDate}' AND resolved <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate} 23:59'))`,
             WL_FIELDS
         ),
         searchAll(
             user,
-            `assignee = '${user.account_id}' AND status = Done AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate}') OR (cf[10009] is empty AND resolved >= '${startDate}' AND resolved <= '${endDate}'))`,
+            `assignee = '${user.account_id}' AND status = Done AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved >= '${startDate}' AND resolved <= '${endDate} 23:59'))`,
             DONE_FIELDS
         ),
         searchAll(
