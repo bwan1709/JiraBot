@@ -31,7 +31,6 @@ router.post('/markdowns', (req, res) => {
     try {
         const { id, title, content } = req.body;
         const now = new Date();
-        const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
         let mdId = id;
         let isNew = false;
@@ -55,7 +54,7 @@ router.post('/markdowns', (req, res) => {
             title: title || '',
             content: content || '',
             created_at: existingMd ? existingMd.created_at : now.toISOString(),
-            expires_at: expiresAt.toISOString() // Reset/refresh expiration on save
+            expires_at: null // No expiration: documents persist until user deletes them
         };
 
         saveMarkdown(md);
@@ -89,22 +88,14 @@ router.get('/public/markdowns/:id', (req, res) => {
     try {
         const md = getMarkdown(req.params.id);
         if (!md) {
-            return res.status(404).json({ error: 'Tài liệu đã hết hạn hoặc không tồn tại' });
-        }
-        
-        // Double check expiration just in case cleanup hasn't run yet
-        const now = new Date().toISOString();
-        if (md.expires_at <= now) {
-            deleteMarkdown(md.id, md.user_id);
-            return res.status(404).json({ error: 'Tài liệu đã hết hạn hoặc không tồn tại' });
+            return res.status(404).json({ error: 'Tài liệu không tồn tại' });
         }
 
         res.json({
             id: md.id,
             title: md.title,
             content: md.content,
-            created_at: md.created_at,
-            expires_at: md.expires_at
+            created_at: md.created_at
         });
     } catch (e) {
         console.error('❌ Lỗi tải shared markdown:', e.message);

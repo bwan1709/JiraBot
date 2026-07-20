@@ -164,7 +164,7 @@ function initDb() {
             title       TEXT,
             content     TEXT,
             created_at  TEXT NOT NULL,
-            expires_at  TEXT NOT NULL,
+            expires_at  TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
     `);
@@ -213,6 +213,14 @@ function initDb() {
     } else {
         // Ensure the designated admin email always has admin role
         db.prepare(`UPDATE users SET role = 'admin' WHERE email = ?`).run(defaultEmail);
+    }
+
+    // Migration: Add deleted_by_user to markdowns (soft-delete so share links survive)
+    const markdownsInfo = db.pragma('table_info(markdowns)');
+    const hasDeletedByUser = markdownsInfo.some(col => col.name === 'deleted_by_user');
+    if (!hasDeletedByUser) {
+        db.exec('ALTER TABLE markdowns ADD COLUMN deleted_by_user INTEGER DEFAULT 0');
+        console.log('  ⚙️ Added deleted_by_user column to markdowns table');
     }
 
     console.log('  💾 SQLite DB initialized:', DB_PATH);
@@ -514,27 +522,32 @@ function deleteNote(id, userId) {
 }
 
 function cleanupMarkdowns() {
-    const now = new Date().toISOString();
-    db.prepare(`DELETE FROM markdowns WHERE expires_at <= ?`).run(now);
+    // No-op: markdowns no longer expire automatically.
+    // Records are soft-deleted (deleted_by_user = 1) when a user removes them;
+    // the public share link continues to work until the document is hard-deleted
+    // by an admin or a future cleanup policy.
 }
 
 function saveMarkdown(md) {
     db.prepare(`
-        INSERT OR REPLACE INTO markdowns (id, user_id, title, content, created_at, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `).run(md.id, md.user_id, md.title, md.content, md.created_at, md.expires_at);
+        INSERT OR REPLACE INTO markdowns (id, user_id, title, content, created_at, expires_at, deleted_by_user)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+    `).run(md.id, md.user_id, md.title, md.content, md.created_at, md.expires_at || null);
 }
 
 function getMarkdown(id) {
+    // Public link: return document regardless of soft-delete status
     return db.prepare(`SELECT * FROM markdowns WHERE id = ?`).get(id);
 }
 
 function getUserMarkdowns(userId) {
-    return db.prepare(`SELECT * FROM markdowns WHERE user_id = ? ORDER BY created_at DESC`).all(userId);
+    // Only return documents not soft-deleted by the user
+    return db.prepare(`SELECT * FROM markdowns WHERE user_id = ? AND (deleted_by_user IS NULL OR deleted_by_user = 0) ORDER BY created_at DESC`).all(userId);
 }
 
 function deleteMarkdown(id, userId) {
-    db.prepare(`DELETE FROM markdowns WHERE id = ? AND user_id = ?`).run(id, userId);
+    // Soft-delete: hide from user list but keep record so share links remain valid
+    db.prepare(`UPDATE markdowns SET deleted_by_user = 1 WHERE id = ? AND user_id = ?`).run(id, userId);
 }
 
 module.exports = {
