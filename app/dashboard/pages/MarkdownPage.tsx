@@ -7,7 +7,6 @@ import {
   Space, 
   message, 
   Tooltip, 
-  Badge, 
   Divider, 
   Typography, 
   Popconfirm,
@@ -25,7 +24,6 @@ import {
   SyncOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
-  ClockCircleOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
   EditOutlined,
@@ -38,21 +36,6 @@ import PageHeader from '../components/PageHeader';
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
-
-// Helper to calculate seconds remaining
-function getRemainingSeconds(expiresAtStr: string): number {
-  const diff = new Date(expiresAtStr).getTime() - Date.now();
-  return Math.max(0, Math.floor(diff / 1000));
-}
-
-// Helper to format remaining time
-function formatRemainingTime(seconds: number): string {
-  if (seconds <= 0) return 'Đã hết hạn';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
 
 // Markdown Renderer Component (loads Marked and Mermaid from CDN)
 interface MarkdownRendererProps {
@@ -359,18 +342,10 @@ export default function MarkdownPage() {
     }
   }, [isMobile, layoutMode]);
   const [loading, setLoading] = useState(true);
-  const [nowTime, setNowTime] = useState(Date.now());
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Poll for remaining time ticking
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNowTime(Date.now());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch documents
   const fetchDocs = useCallback(async (selectIdAfterLoad?: string) => {
@@ -469,7 +444,7 @@ export default function MarkdownPage() {
       title: '',
       content: '',
       created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      expires_at: ''
     };
 
     setSelectedDoc(blankDoc);
@@ -583,7 +558,7 @@ export default function MarkdownPage() {
     <>
       <PageHeader 
         title="Công cụ Markdown" 
-        subtitle="Đọc, viết Markdown, kết xuất biểu đồ Mermaid, tự động hủy trong 24h & chia sẻ trực tuyến"
+        subtitle="Đọc, viết Markdown, kết xuất biểu đồ Mermaid và chia sẻ trực tuyến"
         showRefresh={false}
       />
       
@@ -633,12 +608,6 @@ export default function MarkdownPage() {
                 dataSource={docs}
                 renderItem={(item) => {
                   const isActive = selectedDoc?.id === item.id;
-                  const secLeft = getRemainingSeconds(item.expires_at);
-                  const pct = Math.min(100, Math.max(0, (secLeft / (24 * 3600)) * 100));
-                  
-                  let progressColor = '#10b981';
-                  if (pct < 15) progressColor = '#ef4444';
-                  else if (pct < 40) progressColor = '#f59e0b';
 
                   return (
                     <div
@@ -665,6 +634,7 @@ export default function MarkdownPage() {
                           </Text>
                           <Popconfirm
                             title="Xóa tài liệu này?"
+                            description="Link chia sẻ sẽ ngừng hoạt động."
                             onConfirm={(e) => {
                               e?.stopPropagation();
                               handleDeleteDoc(item.id);
@@ -691,12 +661,9 @@ export default function MarkdownPage() {
                           {item.content || 'Không có nội dung'}
                         </Paragraph>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                          <Badge color={progressColor} />
-                          <span style={{ fontSize: 10, color: progressColor, fontWeight: 500 }}>
-                            {formatRemainingTime(secLeft)}
-                          </span>
-                        </div>
+                        <Text type="secondary" style={{ fontSize: 10 }}>
+                          {new Date(item.created_at).toLocaleDateString('vi-VN')}
+                        </Text>
                       </Flex>
                     </div>
                   );
