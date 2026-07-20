@@ -81,6 +81,7 @@ router.get('/me', (req, res) => {
         department: u.department,
         base_url: u.base_url,
         job_title: u.job_title || '',
+        manager_id: u.manager_id || null,
         projects: JSON.parse(u.projects || '[]')
     };
     if (full) {
@@ -88,6 +89,7 @@ router.get('/me', (req, res) => {
         payload.account_id = u.account_id || '';
         payload.cloud_id = u.cloud_id || '';
         payload.email_jira = u.email || ''; // email is also used for Jira auth
+        payload.signature_url = u.signature_url || '';
     }
     res.json({ user: payload });
 });
@@ -95,7 +97,7 @@ router.get('/me', (req, res) => {
 // PUT /api/profile — Update own profile (any authenticated user)
 router.put('/profile', (req, res) => {
     try {
-        const { full_name, department, job_title, email_jira, token, account_id, cloud_id, base_url, password, projects } = req.body;
+        const { full_name, department, job_title, manager_id, email_jira, token, account_id, cloud_id, base_url, password, projects, signature_url } = req.body;
 
         if (!full_name || !full_name.trim()) {
             return res.status(400).json({ error: 'Vui lòng nhập Họ & Tên.' });
@@ -109,10 +111,12 @@ router.put('/profile', (req, res) => {
             full_name: full_name.trim(),
             department: (department || '').trim(),
             job_title: (job_title || '').trim(),
+            manager_id: manager_id || null,
             token: (token || '').trim(),
             account_id: (account_id || '').trim(),
             cloud_id: (cloud_id || '').trim(),
             base_url: (base_url || '').trim(),
+            signature_url: signature_url || null,
             projects: Array.isArray(projects) ? JSON.stringify(projects) : '[]'
         };
         if (password) fields.password = password;
@@ -138,6 +142,16 @@ router.get('/users', requireAdmin, (req, res) => {
             projects: JSON.parse(u.projects || '[]')
         }));
         res.json({ users: parsedUsers });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/public/users — List basic user info for dropdowns
+router.get('/public/users', (req, res) => {
+    try {
+        const users = db.prepare(`SELECT id, email, full_name, job_title, department, role FROM users ORDER BY full_name ASC`).all();
+        res.json({ users });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

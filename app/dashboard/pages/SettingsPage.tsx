@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
 import { App, Card, Form, Input, Row, Col, Divider, Button, Typography, InputNumber, Space, Flex, Select } from 'antd';
 import {
   QuestionCircleOutlined,
@@ -21,11 +22,19 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [minutes, setMinutes] = useState(autoReloadMinutes);
   const [jiraProjects, setJiraProjects] = useState<{ id: string; key: string; name: string }[]>([]);
+  const [publicUsers, setPublicUsers] = useState<{ id: number; full_name: string; email: string }[]>([]);
+  const sigCanvas = useRef<SignatureCanvas>(null);
+  const [existingSignature, setExistingSignature] = useState<string>('');
 
   useEffect(() => {
     api
       .get<{ projects: { id: string; key: string; name: string }[] }>('/api/projects')
       .then((res) => setJiraProjects(res.projects || []))
+      .catch((err) => console.error(err));
+      
+    api
+      .get<{ users: any[] }>('/api/public/users')
+      .then((res) => setPublicUsers(res.users || []))
       .catch((err) => console.error(err));
   }, []);
 
@@ -36,6 +45,7 @@ export default function SettingsPage() {
       full_name: user.full_name || '',
       department: user.department || '',
       job_title: user.job_title || '',
+      manager_id: user.manager_id || null,
       password: '',
       confirm: '',
     });
@@ -51,6 +61,9 @@ export default function SettingsPage() {
           base_url: me.base_url || '',
           projects: me.projects || [],
         });
+        if (me.signature_url) {
+          setExistingSignature(me.signature_url);
+        }
       })
       .catch(() => { });
   }, [user, form]);
@@ -68,7 +81,16 @@ export default function SettingsPage() {
       base_url: (v.base_url || '').trim(),
       projects: v.projects || [],
     };
+    if (v.manager_id) payload.manager_id = v.manager_id;
     if (v.password) payload.password = v.password;
+    
+    // Grab signature if drawn
+    if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+      payload.signature_url = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+    } else if (existingSignature) {
+      payload.signature_url = existingSignature;
+    }
+
     setLoading(true);
     try {
       await api.put('/api/profile', payload);
@@ -138,6 +160,17 @@ export default function SettingsPage() {
                     <Input disabled />
                   </Form.Item>
                 </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item name="manager_id" label="Người quản lý (PM / Leader)">
+                    <Select
+                      allowClear
+                      showSearch
+                      placeholder="Chọn người quản lý để duyệt báo cáo"
+                      options={publicUsers.map((u) => ({ value: u.id, label: `${u.full_name || u.email}` }))}
+                      filterOption={(input, option) => (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())}
+                    />
+                  </Form.Item>
+                </Col>
                 <Col span={24}>
                   <Form.Item name="projects" label="Dự án tham gia">
                     <Select
@@ -181,6 +214,29 @@ export default function SettingsPage() {
                   >
                     <Input.Password placeholder="••••••••" autoComplete="new-password" />
                   </Form.Item>
+                </Col>
+              </Row>
+
+              <Divider orientation="left" plain style={{ margin: '2px 0 14px' }}>
+                Chữ ký số <Text type="secondary">(dùng để ký duyệt báo cáo)</Text>
+              </Divider>
+              <Row gutter={12}>
+                <Col span={24}>
+                  <div style={{ border: '1px solid #d9d9d9', borderRadius: 6, padding: 8, background: '#fafafa', display: 'inline-block' }}>
+                    {existingSignature && !sigCanvas.current?.isEmpty() && (
+                       <div style={{ marginBottom: 8 }}>
+                         <Text type="secondary">Chữ ký hiện tại đã lưu. Vẽ lại vào ô dưới để thay thế.</Text>
+                       </div>
+                    )}
+                    <SignatureCanvas 
+                      ref={sigCanvas} 
+                      penColor="black"
+                      canvasProps={{ width: 400, height: 150, className: 'sigCanvas', style: { border: '1px dashed #ccc', background: '#fff', borderRadius: 4 } }} 
+                    />
+                    <div style={{ marginTop: 8 }}>
+                      <Button size="small" onClick={() => sigCanvas.current?.clear()}>Xóa / Vẽ lại</Button>
+                    </div>
+                  </div>
                 </Col>
               </Row>
 

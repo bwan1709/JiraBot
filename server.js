@@ -11,6 +11,7 @@ const authRoutes = require('./src/routes/auth.routes');
 const jiraRoutes = require('./src/routes/jira.routes');
 const noteRoutes = require('./src/routes/note.routes');
 const markdownRoutes = require('./src/routes/markdown.routes');
+const reportRoutes = require('./src/routes/report.routes');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api', authRoutes);
 app.use('/api', jiraRoutes);
 app.use('/api', noteRoutes);
 app.use('/api', markdownRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Dynamic meta injection for shared notes
 app.get('/share/:id', async (req, res) => {

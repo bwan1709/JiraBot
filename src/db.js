@@ -121,6 +121,18 @@ function initDb() {
         console.log('  ⚙️ Added projects column to users table');
     }
 
+    const hasSignature = tableInfo.some(col => col.name === 'signature_url');
+    if (!hasSignature) {
+        db.exec('ALTER TABLE users ADD COLUMN signature_url TEXT');
+        console.log('  ⚙️ Added signature_url column to users table');
+    }
+
+    const hasManager = tableInfo.some(col => col.name === 'manager_id');
+    if (!hasManager) {
+        db.exec('ALTER TABLE users ADD COLUMN manager_id INTEGER');
+        console.log('  ⚙️ Added manager_id column to users table');
+    }
+
     db.exec(`
         CREATE TABLE IF NOT EXISTS monthly_plans (
             year_month   TEXT PRIMARY KEY,
@@ -166,6 +178,29 @@ function initDb() {
             created_at  TEXT NOT NULL,
             expires_at  TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS monthly_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            year_month TEXT NOT NULL,
+            snapshot_data TEXT,
+            user_comment TEXT,
+            status TEXT DEFAULT 'pending',
+            current_approver_id INTEGER,
+            created_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS report_approvals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_id INTEGER NOT NULL,
+            approver_id INTEGER NOT NULL,
+            comment TEXT,
+            signature_url TEXT,
+            approved_at TEXT,
+            FOREIGN KEY (report_id) REFERENCES monthly_reports(id) ON DELETE CASCADE,
+            FOREIGN KEY (approver_id) REFERENCES users(id) ON DELETE CASCADE
         );
     `);
 

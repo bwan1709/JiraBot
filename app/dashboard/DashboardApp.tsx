@@ -15,6 +15,8 @@ import SharedNotePage from './pages/SharedNotePage';
 import MarkdownPage from './pages/MarkdownPage';
 import SharedMarkdownPage from './pages/SharedMarkdownPage';
 import PdfEditorPage from './pages/PdfEditorPage';
+import MyReportsPage from './pages/MyReportsPage';
+import ApprovalsPage from './pages/ApprovalsPage';
 
 export default function DashboardApp() {
   return (
@@ -27,6 +29,8 @@ export default function DashboardApp() {
             <Route index element={<OverviewPage />} />
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="tasks" element={<TasksPage />} />
+            <Route path="my-reports" element={<MyReportsPage />} />
+            <Route path="approvals" element={<ApprovalsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="plans" element={<PlansPage />} />

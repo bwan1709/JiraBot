@@ -17,6 +17,7 @@ import {
   List,
   Grid,
   Flex,
+  Modal,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -26,6 +27,7 @@ import {
   TeamOutlined,
   UserAddOutlined,
   UnorderedListOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { Navigate } from 'react-router-dom';
 import { api } from '../../api';
@@ -42,11 +44,14 @@ export default function UsersPage() {
   const mobile = !screens.sm;
   const { user: currentUser, isAdmin, reloadUser } = useDashboard();
   const [form] = Form.useForm();
+  const [resetForm] = Form.useForm();
   const [users, setUsers] = useState<User[]>([]);
   const [jiraProjects, setJiraProjects] = useState<{ id: string; key: string; name: string }[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const reset = () => {
     setEditingId(null);
@@ -142,6 +147,41 @@ export default function UsersPage() {
     }
   };
 
+  const openResetModal = (u: User) => {
+    setResetTarget(u);
+    resetForm.resetFields();
+  };
+
+  const onResetPassword = async () => {
+    const { newPassword } = await resetForm.validateFields();
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      // Fetch current user data to avoid overwriting other fields
+      const current = users.find((u) => u.id === resetTarget.id);
+      if (!current) throw new Error('Không tìm thấy người dùng.');
+      await api.put(`/api/users/${resetTarget.id}`, {
+        email: current.email,
+        full_name: current.full_name || '',
+        department: current.department || '',
+        job_title: current.job_title || '',
+        role: current.role || 'client',
+        token: current.token || '',
+        account_id: current.account_id || '',
+        cloud_id: current.cloud_id || '',
+        base_url: current.base_url || '',
+        projects: current.projects || [],
+        password: newPassword,
+      });
+      message.success(`Đặt lại mật khẩu cho "${current.full_name || current.email}" thành công!`);
+      setResetTarget(null);
+    } catch (e: any) {
+      message.error(`Lỗi: ${e.message}`);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const columns: ColumnsType<User> = [
     { title: 'Họ & Tên', dataIndex: 'full_name', render: (v) => <strong>{v || '—'}</strong> },
     { title: 'Email', dataIndex: 'email' },
@@ -186,12 +226,19 @@ export default function UsersPage() {
     {
       title: 'Thao tác',
       key: 'act',
-      width: 150,
+      width: 200,
       align: 'center',
       render: (_v, u) => (
         <Space size={4}>
           <Button size="small" icon={<EditOutlined />} onClick={() => startEdit(u)}>
             Sửa
+          </Button>
+          <Button
+            size="small"
+            icon={<KeyOutlined />}
+            onClick={() => openResetModal(u)}
+          >
+            Mật khẩu
           </Button>
           <Popconfirm
             title="Xóa người dùng này?"
@@ -364,6 +411,9 @@ export default function UsersPage() {
                       <Button size="small" icon={<EditOutlined />} onClick={() => startEdit(u)}>
                         Sửa
                       </Button>
+                      <Button size="small" icon={<KeyOutlined />} onClick={() => openResetModal(u)}>
+                        Mật khẩu
+                      </Button>
                       <Popconfirm
                         title="Xóa người dùng này?"
                         description="Thao tác này không thể hoàn tác."
@@ -394,6 +444,54 @@ export default function UsersPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* Reset Password Modal */}
+      <Modal
+        title={
+          <Space>
+            <KeyOutlined />
+            Đặt lại mật khẩu — {resetTarget?.full_name || resetTarget?.email}
+          </Space>
+        }
+        open={!!resetTarget}
+        onCancel={() => setResetTarget(null)}
+        onOk={onResetPassword}
+        okText="Xác nhận đặt lại"
+        cancelText="Hủy"
+        confirmLoading={resetting}
+        destroyOnClose
+      >
+        <Form form={resetForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới.' },
+              { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự.' },
+            ]}
+          >
+            <Input.Password placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)" autoFocus />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="Xác nhận mật khẩu"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu.' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp.'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="Nhập lại mật khẩu mới" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 }

@@ -13,6 +13,8 @@ import {
   EditOutlined,
   FileMarkdownOutlined,
   FilePdfOutlined,
+  SendOutlined,
+  CheckSquareOutlined,
 } from '@ant-design/icons';
 import { useDashboard } from '../context';
 
@@ -31,6 +33,10 @@ export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: bool
     { key: '/', icon: <DashboardOutlined />, label: 'Tổng quan' },
     { key: '/timeline', icon: <ClockCircleOutlined />, label: 'Timeline ngày' },
     { key: '/tasks', icon: <UnorderedListOutlined />, label: 'Danh sách Tasks' },
+    { type: 'divider' },
+    { key: 'group-report', type: 'group', label: collapsed ? '' : 'BÁO CÁO & TRÌNH KÝ' },
+    { key: '/my-reports', icon: <SendOutlined />, label: 'Báo cáo của tôi' },
+    ...(isPmOrAdmin ? [{ key: '/approvals', icon: <CheckSquareOutlined />, label: 'Duyệt báo cáo' }] : []),
     { type: 'divider' },
     { key: 'group-manage', type: 'group', label: collapsed ? '' : 'HỆ THỐNG' },
     { key: '/plans', icon: <CalendarOutlined />, label: isPmOrAdmin ? 'Quản lý kế hoạch' : 'Kế hoạch tháng' },
