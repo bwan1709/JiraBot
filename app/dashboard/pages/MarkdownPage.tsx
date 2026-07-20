@@ -863,9 +863,9 @@ export default function MarkdownPage() {
               </div>
               
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ClockCircleOutlined style={{ fontSize: 12, color: '#64748b' }} />
+                <ShareAltOutlined style={{ fontSize: 12, color: '#64748b' }} />
                 <span style={{ fontSize: 11, color: '#64748b' }}>
-                  Tài liệu này sẽ tự động hủy sau 24 giờ kể từ lần cập nhật cuối. Có thể chia sẻ ẩn danh.
+                  Tài liệu được lưu vĩnh viễn. Link chia sẻ hoạt động cho đến khi bạn xóa tài liệu.
                 </span>
               </div>
             </Card>

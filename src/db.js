@@ -133,16 +133,6 @@ function initDb() {
         console.log('  ⚙️ Added manager_id column to users table');
     }
 
-    // Migration: Add deleted_by_user to markdowns (soft-delete so share links survive)
-    const markdownsInfo = db.pragma('table_info(markdowns)');
-    if (markdownsInfo.length > 0) {
-        const hasDeletedByUser = markdownsInfo.some(col => col.name === 'deleted_by_user');
-        if (!hasDeletedByUser) {
-            db.exec('ALTER TABLE markdowns ADD COLUMN deleted_by_user INTEGER DEFAULT 0');
-            console.log('  ⚙️ Added deleted_by_user column to markdowns table');
-        }
-    }
-
     db.exec(`
         CREATE TABLE IF NOT EXISTS monthly_plans (
             year_month   TEXT PRIMARY KEY,
@@ -186,7 +176,7 @@ function initDb() {
             title       TEXT,
             content     TEXT,
             created_at  TEXT NOT NULL,
-            expires_at  TEXT NOT NULL,
+            expires_at  TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
@@ -258,6 +248,14 @@ function initDb() {
     } else {
         // Ensure the designated admin email always has admin role
         db.prepare(`UPDATE users SET role = 'admin' WHERE email = ?`).run(defaultEmail);
+    }
+
+    // Migration: Add deleted_by_user to markdowns (runs after CREATE TABLE so table is guaranteed to exist)
+    const markdownsInfo = db.pragma('table_info(markdowns)');
+    const hasDeletedByUser = markdownsInfo.some(col => col.name === 'deleted_by_user');
+    if (!hasDeletedByUser) {
+        db.exec('ALTER TABLE markdowns ADD COLUMN deleted_by_user INTEGER DEFAULT 0');
+        console.log('  ⚙️ Added deleted_by_user column to markdowns table');
     }
 
     console.log('  💾 SQLite DB initialized:', DB_PATH);
