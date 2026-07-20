@@ -216,11 +216,37 @@ function initDb() {
     }
 
     // Migration: Add deleted_by_user to markdowns (soft-delete so share links survive)
-    const markdownsInfo = db.pragma('table_info(markdowns)');
+    let markdownsInfo = db.pragma('table_info(markdowns)');
     const hasDeletedByUser = markdownsInfo.some(col => col.name === 'deleted_by_user');
     if (!hasDeletedByUser) {
         db.exec('ALTER TABLE markdowns ADD COLUMN deleted_by_user INTEGER DEFAULT 0');
         console.log('  ⚙️ Added deleted_by_user column to markdowns table');
+        // Refresh table info after altering
+        markdownsInfo = db.pragma('table_info(markdowns)');
+    }
+
+    // Migration: Remove NOT NULL constraint from expires_at if it exists
+    const expiresAtInfo = markdownsInfo.find(col => col.name === 'expires_at');
+    if (expiresAtInfo && expiresAtInfo.notnull === 1) {
+        console.log('  ⚙️ Removing NOT NULL constraint from markdowns.expires_at...');
+        db.transaction(() => {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS markdowns_new (
+                    id          TEXT PRIMARY KEY,
+                    user_id     INTEGER NOT NULL,
+                    title       TEXT,
+                    content     TEXT,
+                    created_at  TEXT NOT NULL,
+                    expires_at  TEXT,
+                    deleted_by_user INTEGER DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                INSERT INTO markdowns_new SELECT id, user_id, title, content, created_at, expires_at, deleted_by_user FROM markdowns;
+                DROP TABLE markdowns;
+                ALTER TABLE markdowns_new RENAME TO markdowns;
+            `);
+        })();
+        console.log('  ✅ Migration complete.');
     }
 
     console.log('  💾 SQLite DB initialized:', DB_PATH);
