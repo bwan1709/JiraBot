@@ -126,15 +126,37 @@ router.post('/issue/:issueKey/transition', async (req, res) => {
 router.post('/issue/:issueKey/worklog', async (req, res) => {
     try {
         const { issueKey } = req.params;
-        const { timeSpent, comment, started } = req.body;
+        const { timeSpent, comment } = req.body;
         if (!timeSpent) {
             return res.status(400).json({ error: 'Thiếu thời gian timeSpent (vd: 2h, 45m)' });
         }
-        const payload = { timeSpent };
-        if (started) payload.started = started;
+
+        // Worklogs are recorded against the task's end date. Keep the date text
+        // returned by Jira instead of parsing it through the server timezone.
+        const issue = await jiraGet(
+            req.user,
+            `/issue/${issueKey}?fields=customfield_10009,customfield_10124,resolutiondate`
+        );
+        const endValue = issue.fields?.customfield_10009
+            || issue.fields?.customfield_10124
+            || issue.fields?.resolutiondate;
+        const endDateMatch = String(endValue || '').match(/^(\d{4}-\d{2}-\d{2})/);
+        const worklogDate = endDateMatch
+            ? endDateMatch[1]
+            : new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Bangkok',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(new Date());
+
+        const payload = {
+            timeSpent,
+            started: `${worklogDate}T09:00:00.000+0700`
+        };
         if (comment) payload.comment = comment;
         await jiraPost(req.user, `/rest/api/2/issue/${issueKey}/worklog`, payload);
-        res.json({ success: true });
+        res.json({ success: true, worklogDate });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -205,7 +227,7 @@ router.get('/daily-report', async (req, res) => {
             return res.status(400).json({ error: 'JIRA_MISSING_INFO' });
         }
 
-        const JQL = `worklogAuthor = '${req.user.account_id}' AND worklogDate = '${date}'`;
+        const JQL = `worklogAuthor = '${req.user.account_id}' AND (worklogDate = '${date}' OR (cf[10009] >= '${date}' AND cf[10009] <= '${date} 23:59') OR (cf[10009] is empty AND cf[10124] >= '${date}' AND cf[10124] <= '${date} 23:59'))`;
         const FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124';
 
         const issues = await searchAll(req.user, JQL, FIELDS);
@@ -215,6 +237,8 @@ router.get('/daily-report', async (req, res) => {
         const pad = (n) => String(n).padStart(2, '0');
         const getLocalDateStr = (dateVal) => {
             if (!dateVal) return null;
+            const dateMatch = String(dateVal).match(/^(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) return dateMatch[1];
             const d = new Date(dateVal);
             if (isNaN(d.getTime())) return null;
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -233,14 +257,7 @@ router.get('/daily-report', async (req, res) => {
                 const aeDate = getLocalDateStr(actualEnd);
                 const asDate = getLocalDateStr(actualStart);
                 
-                let targetDateStr = logDate;
-                if (logDate === date) {
-                    targetDateStr = logDate;
-                } else if (aeDate === date) {
-                    targetDateStr = aeDate;
-                } else if (asDate === date) {
-                    targetDateStr = asDate;
-                }
+                const targetDateStr = aeDate || logDate || asDate;
 
                 if (targetDateStr === date) {
                     timeSpentSeconds += wl.timeSpentSeconds;
@@ -271,17 +288,10 @@ router.get('/daily-report', async (req, res) => {
                 const aeDate = getLocalDateStr(actualEnd);
                 const asDate = getLocalDateStr(actualStart);
                 
-                let targetDateStr = logDate;
-                if (logDate === date) {
-                    targetDateStr = logDate;
-                } else if (aeDate === date) {
-                    targetDateStr = aeDate;
-                } else if (asDate === date) {
-                    targetDateStr = asDate;
-                }
+                const targetDateStr = aeDate || logDate || asDate;
 
                 if (targetDateStr === date) {
-                    const startedTimestamp = logDate === date 
+                    const startedTimestamp = aeDate !== date && logDate === date
                         ? wl.started 
                         : `${date}T09:00:00.000+0700`; // default to 9:00 AM on mapped date
                         

@@ -13,7 +13,6 @@ import {
   Grid
 } from 'antd';
 import { 
-  ClockCircleOutlined, 
   ExclamationCircleOutlined,
   FileTextOutlined,
   DownloadOutlined
@@ -24,45 +23,24 @@ import { MarkdownRenderer } from './MarkdownPage';
 
 const { Title, Text } = Typography;
 
-function getRemainingSeconds(expiresAtStr: string): number {
-  const diff = new Date(expiresAtStr).getTime() - Date.now();
-  return Math.max(0, Math.floor(diff / 1000));
-}
-
-function formatRemainingTime(seconds: number): string {
-  if (seconds <= 0) return 'Đã hết hạn';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
+type SharedMarkdownDoc = Pick<MarkdownDoc, 'id' | 'title' | 'content' | 'created_at'>;
 
 export default function SharedMarkdownPage() {
   const { id } = useParams<{ id: string }>();
-  const [doc, setDoc] = useState<MarkdownDoc | null>(null);
+  const [doc, setDoc] = useState<SharedMarkdownDoc | null>(null);
   const [loading, setLoading] = useState(true);
 
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.lg;
   const [error, setError] = useState<string | null>(null);
-  const [nowTime, setNowTime] = useState(Date.now());
-
-  // Poll countdown timer every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNowTime(Date.now());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // Fetch the public document details
   useEffect(() => {
     async function loadSharedDoc() {
       try {
-        const data = await api.get<MarkdownDoc>(`/api/public/markdowns/${id}`);
+        const data = await api.get<SharedMarkdownDoc>(`/api/public/markdowns/${id}`);
         setDoc(data);
       } catch (e: any) {
-        setError(e.message || 'Tài liệu không tồn tại hoặc đã hết hạn');
+        setError(e.message || 'Tài liệu không tồn tại');
       } finally {
         setLoading(false);
       }
@@ -129,7 +107,7 @@ export default function SharedMarkdownPage() {
           <ExclamationCircleOutlined style={{ fontSize: 54, color: '#ef4444', marginBottom: 16 }} />
           <Title level={3} style={{ margin: '0 0 8px 0' }}>Tài liệu không khả dụng</Title>
           <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-            Liên kết này không tồn tại hoặc tài liệu đã tự động xóa sau thời hạn 24 giờ.
+            Liên kết này không tồn tại hoặc tài liệu đã bị gỡ bỏ.
           </Text>
           <div style={{ fontSize: 12, color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
             Cung cấp bởi JiraBot QuickShare
@@ -138,46 +116,6 @@ export default function SharedMarkdownPage() {
       </div>
     );
   }
-
-  const secLeft = getRemainingSeconds(doc.expires_at);
-  const isExpired = secLeft <= 0;
-
-  if (isExpired) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        height: '100vh', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        padding: 24,
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
-      }}>
-        <Card 
-          style={{ 
-            maxWidth: 480, 
-            width: '100%', 
-            textAlign: 'center', 
-            borderRadius: 16,
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}
-        >
-          <ClockCircleOutlined style={{ fontSize: 54, color: '#f59e0b', marginBottom: 16 }} />
-          <Title level={3} style={{ margin: '0 0 8px 0' }}>Tài liệu đã hết hạn</Title>
-          <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-            Tài liệu này đã hết hạn lưu trữ 24 giờ và đã tự động hủy bỏ.
-          </Text>
-          <div style={{ fontSize: 12, color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
-            Cung cấp bởi JiraBot QuickShare
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  const pct = Math.min(100, Math.max(0, (secLeft / (24 * 3600)) * 100));
-  let badgeColor = '#10b981';
-  if (pct < 15) badgeColor = '#ef4444';
-  else if (pct < 40) badgeColor = '#f59e0b';
 
   return (
     <div style={{ 
@@ -221,16 +159,16 @@ export default function SharedMarkdownPage() {
             <Badge 
               count={
                 <Flex align="center" gap={6} style={{ 
-                  backgroundColor: badgeColor + '15', 
-                  color: badgeColor, 
+                  backgroundColor: '#10b98115',
+                  color: '#10b981',
                   padding: '4px 10px', 
                   borderRadius: 20,
-                  border: `1px solid ${badgeColor}30`,
+                  border: '1px solid #10b98130',
                   fontSize: 12,
                   fontWeight: 600
                 }}>
-                  <ClockCircleOutlined />
-                  <span>Hủy sau: {formatRemainingTime(secLeft)}</span>
+                  <FileTextOutlined />
+                  <span>Liên kết không hết hạn</span>
                 </Flex>
               } 
             />

@@ -165,6 +165,8 @@ async function refreshMonthData(user, yearMonth) {
 
     const getLocalDateStr = (dateVal) => {
         if (!dateVal) return null;
+        const dateMatch = String(dateVal).match(/^(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) return dateMatch[1];
         const d = new Date(dateVal);
         if (isNaN(d.getTime())) return null;
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -211,14 +213,7 @@ async function refreshMonthData(user, yearMonth) {
             const aeDate = getLocalDateStr(actualEnd);
             const asDate = getLocalDateStr(actualStart);
             
-            let targetDateStr = logDate;
-            if (logDate && logDate >= startDate && logDate <= endDate) {
-                targetDateStr = logDate;
-            } else if (aeDate && aeDate >= startDate && aeDate <= endDate) {
-                targetDateStr = aeDate;
-            } else if (asDate && asDate >= startDate && asDate <= endDate) {
-                targetDateStr = asDate;
-            }
+            const targetDateStr = aeDate || logDate || asDate;
 
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
@@ -243,14 +238,7 @@ async function refreshMonthData(user, yearMonth) {
             const aeDate = getLocalDateStr(actualEnd);
             const asDate = getLocalDateStr(actualStart);
             
-            let targetDateStr = logDate;
-            if (logDate && logDate >= startDate && logDate <= endDate) {
-                targetDateStr = logDate;
-            } else if (aeDate && aeDate >= startDate && aeDate <= endDate) {
-                targetDateStr = aeDate;
-            } else if (asDate && asDate >= startDate && asDate <= endDate) {
-                targetDateStr = asDate;
-            }
+            const targetDateStr = aeDate || logDate || asDate;
 
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);

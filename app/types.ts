@@ -143,6 +143,6 @@ export interface MarkdownDoc {
   title: string;
   content: string;
   created_at: string;
-  expires_at: string;
+  expires_at: string | null;
 }
 
