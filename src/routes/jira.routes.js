@@ -259,7 +259,7 @@ router.get('/daily-report', async (req, res) => {
                 const aeDate = getLocalDateStr(actualEnd);
                 const asDate = getLocalDateStr(actualStart);
                 
-                const targetDateStr = aeDate || logDate || asDate;
+                const targetDateStr = logDate || aeDate || asDate;
 
                 if (targetDateStr === date) {
                     timeSpentSeconds += wl.timeSpentSeconds;
@@ -296,7 +296,7 @@ router.get('/daily-report', async (req, res) => {
                 const aeDate = getLocalDateStr(actualEnd);
                 const asDate = getLocalDateStr(actualStart);
                 
-                const targetDateStr = aeDate || logDate || asDate;
+                const targetDateStr = logDate || aeDate || asDate;
 
                 if (targetDateStr === date) {
                     const startedTimestamp = aeDate !== date && logDate === date

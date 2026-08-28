@@ -215,7 +215,7 @@ async function refreshMonthData(user, yearMonth) {
             const aeDate = getLocalDateStr(actualEnd);
             const asDate = getLocalDateStr(actualStart);
             
-            const targetDateStr = aeDate || logDate || asDate;
+            const targetDateStr = logDate || aeDate || asDate;
 
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
@@ -246,7 +246,7 @@ async function refreshMonthData(user, yearMonth) {
             const aeDate = getLocalDateStr(actualEnd);
             const asDate = getLocalDateStr(actualStart);
             
-            const targetDateStr = aeDate || logDate || asDate;
+            const targetDateStr = logDate || aeDate || asDate;
 
             if (targetDateStr >= startDate && targetDateStr <= endDate) {
                 const mappedDateStr = mapToWorkingDay(targetDateStr);
