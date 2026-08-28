@@ -227,8 +227,8 @@ router.get('/daily-report', async (req, res) => {
             return res.status(400).json({ error: 'JIRA_MISSING_INFO' });
         }
 
-        const JQL = `worklogAuthor = '${req.user.account_id}' AND (worklogDate = '${date}' OR (cf[10009] >= '${date}' AND cf[10009] <= '${date} 23:59') OR (cf[10009] is empty AND cf[10124] >= '${date}' AND cf[10124] <= '${date} 23:59'))`;
-        const FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124';
+        const JQL = `(worklogAuthor = '${req.user.account_id}' OR assignee = '${req.user.account_id}') AND (worklogDate = '${date}' OR (cf[10009] >= '${date}' AND cf[10009] <= '${date} 23:59') OR (cf[10009] is empty AND cf[10124] >= '${date}' AND cf[10124] <= '${date} 23:59'))`;
+        const FIELDS = 'summary,status,worklog,issuetype,project,assignee,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124';
 
         const issues = await searchAll(req.user, JQL, FIELDS);
 
@@ -251,7 +251,9 @@ router.get('/daily-report', async (req, res) => {
             const wls = issue.fields.worklog?.worklogs || [];
             let timeSpentSeconds = 0;
             wls.forEach(wl => {
-                if (wl.author.accountId !== req.user.account_id) return;
+                const isUserAuthor = wl.author?.accountId === req.user.account_id;
+                const isAssignee = issue.fields?.assignee?.accountId === req.user.account_id;
+                if (!isUserAuthor && !isAssignee) return;
                 
                 const logDate = getLocalDateStr(wl.started);
                 const aeDate = getLocalDateStr(actualEnd);
@@ -277,12 +279,18 @@ router.get('/daily-report', async (req, res) => {
 
         // Extract and sort individual worklogs for the timeline
         const worklogs = [];
+        const processedDailyWlIds = new Set();
         issues.forEach(issue => {
             const actualStart = getActualStart(issue.fields);
             const actualEnd = getActualEnd(issue.fields);
             const wls = issue.fields.worklog?.worklogs || [];
             wls.forEach(wl => {
-                if (wl.author.accountId !== req.user.account_id) return;
+                const isUserAuthor = wl.author?.accountId === req.user.account_id;
+                const isAssignee = issue.fields?.assignee?.accountId === req.user.account_id;
+                if (!isUserAuthor && !isAssignee) return;
+
+                if (wl.id && processedDailyWlIds.has(wl.id)) return;
+                if (wl.id) processedDailyWlIds.add(wl.id);
                 
                 const logDate = getLocalDateStr(wl.started);
                 const aeDate = getLocalDateStr(actualEnd);

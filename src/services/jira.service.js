@@ -118,13 +118,13 @@ async function refreshMonthData(user, yearMonth) {
     const t0 = Date.now();
 
     // ── Run 4 queries in parallel ──────────────────────────────────────
-    const WL_FIELDS   = 'summary,worklog,issuetype,project,status,customfield_10008,customfield_10009,customfield_10124,resolutiondate';
-    const DONE_FIELDS = 'summary,status,worklog,issuetype,project,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124,labels,duedate,customfield_10015,customfield_10128,customfield_10123,customfield_10016,customfield_10035,parent,created';
+    const WL_FIELDS   = 'summary,worklog,issuetype,project,status,assignee,customfield_10008,customfield_10009,customfield_10124,resolutiondate';
+    const DONE_FIELDS = 'summary,status,worklog,issuetype,project,assignee,resolutiondate,timeoriginalestimate,customfield_10008,customfield_10009,customfield_10124,labels,duedate,customfield_10015,customfield_10128,customfield_10123,customfield_10016,customfield_10035,parent,created';
 
     const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
         searchAll(
             user,
-            `worklogAuthor = '${user.account_id}' AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is not empty AND resolved >= '${startDate}' AND resolved <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate} 23:59'))`,
+            `(worklogAuthor = '${user.account_id}' OR assignee = '${user.account_id}') AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is not empty AND resolved >= '${startDate}' AND resolved <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate} 23:59'))`,
             WL_FIELDS
         ),
         searchAll(
@@ -207,7 +207,9 @@ async function refreshMonthData(user, yearMonth) {
         const wls = issue.fields.worklog?.worklogs || [];
         let totalSec = 0;
         wls.forEach(wl => {
-            if (wl.author.accountId !== user.account_id) return;
+            const isUserAuthor = wl.author?.accountId === user.account_id;
+            const isAssignee = issue.fields?.assignee?.accountId === user.account_id;
+            if (!isUserAuthor && !isAssignee) return;
             
             const logDate = getLocalDateStr(wl.started);
             const aeDate = getLocalDateStr(actualEnd);
@@ -225,6 +227,7 @@ async function refreshMonthData(user, yearMonth) {
         return totalSec;
     };
 
+    const processedWlIds = new Set();
     wlIssues.forEach(issue => {
         if (issue.fields.issuetype.subtask !== true) return; // Only process subtasks!
 
@@ -232,7 +235,12 @@ async function refreshMonthData(user, yearMonth) {
         const actualEnd = getActualEnd(issue.fields);
         const wls = issue.fields.worklog?.worklogs || [];
         wls.forEach(wl => {
-            if (wl.author.accountId !== user.account_id) return;
+            const isUserAuthor = wl.author?.accountId === user.account_id;
+            const isAssignee = issue.fields?.assignee?.accountId === user.account_id;
+            if (!isUserAuthor && !isAssignee) return;
+
+            if (wl.id && processedWlIds.has(wl.id)) return;
+            if (wl.id) processedWlIds.add(wl.id);
             
             const logDate = getLocalDateStr(wl.started);
             const aeDate = getLocalDateStr(actualEnd);
@@ -252,7 +260,7 @@ async function refreshMonthData(user, yearMonth) {
     // ── Process done tasks ─────────────────────────────────────────────
     const tasks = doneIssues.filter(issue => issue.fields.issuetype.subtask === true).map(issue => {
         const allWls = issue.fields.worklog?.worklogs || [];
-        const userWls = allWls.filter(w => w.author.accountId === user.account_id);
+        const userWls = allWls.filter(w => w.author?.accountId === user.account_id || issue.fields?.assignee?.accountId === user.account_id);
         const totalSec = getIssueSecondsForMonth(issue);
         let resolvedDate = null;
         if (issue.fields.resolutiondate) {
@@ -273,7 +281,7 @@ async function refreshMonthData(user, yearMonth) {
         if (!originalEstimate) missingFields.push('Original estimate');
         if (!actualStart) missingFields.push('Actual start');
         if (!actualEnd) missingFields.push('Actual end');
-        if (userWls.length === 0) missingFields.push('Time tracking (Worklog)');
+        if (allWls.length === 0 && userWls.length === 0) missingFields.push('Time tracking (Worklog)');
         if (labels.length === 0) missingFields.push('Labels');
         if (!duedate) missingFields.push('Due date');
         if (!startDateField) missingFields.push('Start date');
