@@ -76,9 +76,8 @@ function TaskTable({ data, currentMonth, onWorklog, onStatus, onEdit }: Props) {
   const todoTasks = useMemo(
     () =>
       (data.todo_tasks || []).filter((t) => {
-        const isSubtask = t.issue_type.toLowerCase().includes('sub');
         const isIdea = (t.status || '').toUpperCase() === 'IDEA';
-        if (!(isSubtask && !isIdea)) return false;
+        if (isIdea) return false;
         if (!t.created) return false;
         return t.created.substring(0, 7) === currentMonth;
       }),

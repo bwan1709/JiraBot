@@ -80,8 +80,6 @@ function StatsGrid({ data, currentMonth }: Props) {
   ).length;
   const filteredTodo = (data.todo_tasks || []).filter(
     (t) =>
-      t.issue_type &&
-      t.issue_type.toLowerCase().includes('sub') &&
       (t.status || '').toUpperCase() !== 'IDEA' &&
       t.created &&
       t.created.substring(0, 7) === currentMonth,

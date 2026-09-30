@@ -124,12 +124,12 @@ async function refreshMonthData(user, yearMonth) {
     const [wlIssues, doneIssues, inProgressIssues, todoIssues] = await Promise.all([
         searchAll(
             user,
-            `(worklogAuthor = '${user.account_id}' OR assignee = '${user.account_id}') AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is not empty AND resolved >= '${startDate}' AND resolved <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved is empty AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate} 23:59'))`,
+`((worklogAuthor = '${user.account_id}' AND worklogDate >= '${startDate}' AND worklogDate <= '${endDate}') OR (assignee = '${user.account_id}' AND ((cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (resolved >= '${startDate}' AND resolved <= '${endDate} 23:59'))))`
             WL_FIELDS
         ),
         searchAll(
             user,
-            `assignee = '${user.account_id}' AND status = Done AND ((cf[10009] is not empty AND cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59') OR (cf[10009] is empty AND resolved >= '${startDate}' AND resolved <= '${endDate} 23:59'))`,
+            `assignee = '${user.account_id}' AND status = Done AND ((resolved >= '${startDate}' AND resolved <= '${endDate} 23:59') OR (worklogDate >= '${startDate}' AND worklogDate <= '${endDate}') OR (cf[10009] >= '${startDate}' AND cf[10009] <= '${endDate} 23:59'))`,
             DONE_FIELDS
         ),
         searchAll(
@@ -229,7 +229,6 @@ async function refreshMonthData(user, yearMonth) {
 
     const processedWlIds = new Set();
     wlIssues.forEach(issue => {
-        if (issue.fields.issuetype.subtask !== true) return; // Only process subtasks!
 
         const actualStart = getActualStart(issue.fields);
         const actualEnd = getActualEnd(issue.fields);
@@ -258,7 +257,7 @@ async function refreshMonthData(user, yearMonth) {
     });
 
     // ── Process done tasks ─────────────────────────────────────────────
-    const tasks = doneIssues.filter(issue => issue.fields.issuetype.subtask === true).map(issue => {
+    const tasks = doneIssues.map(issue => {
         const allWls = issue.fields.worklog?.worklogs || [];
         const userWls = allWls.filter(w => w.author?.accountId === user.account_id || issue.fields?.assignee?.accountId === user.account_id);
         const totalSec = getIssueSecondsForMonth(issue);
@@ -315,7 +314,6 @@ async function refreshMonthData(user, yearMonth) {
 
     // ── Process in-progress tasks ──────────────────────────────────────
     const inProgressTasks = inProgressIssues.filter(issue => {
-        if (issue.fields.issuetype.subtask !== true) return false;
         const created = issue.fields.created;
         if (!created) return false;
         return created.substring(0, 7) === yearMonth;
@@ -347,9 +345,8 @@ async function refreshMonthData(user, yearMonth) {
 
     // ── Process to-do tasks ────────────────────────────────────────────
     const todoTasks = todoIssues.filter(issue => {
-        const isSubtask = issue.fields.issuetype.subtask === true;
         const statusName = (issue.fields.status.name || '').toUpperCase();
-        if (!(isSubtask && statusName !== 'IDEA')) return false;
+        if (statusName === 'IDEA') return false;
 
         const created = issue.fields.created;
         if (!created) return false;
